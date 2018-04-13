@@ -30,11 +30,18 @@ SRCS=	rthread.c \
 	rthread_rwlock.c \
 	rthread_rwlockattr.c \
 	rthread_sched.c \
-	rthread_sem.c \
 	rthread_sig.c \
 	rthread_stack.c \
 	rthread_spin_lock.c \
 	sched_prio.c
+
+# Architectures that implement atomics
+.if ${MACHINE_ARCH} == "amd64" || ${MACHINE_ARCH} == "i386" || \
+    ${MACHINE_ARCH} == "mips64" || ${MACHINE_ARCH} == "mips64el"
+SRCS+=	rthread_sem_atomic.c
+.else
+SRCS+=	rthread_sem.c
+.endif
 
 SRCDIR= ${.CURDIR}/../libpthread
 .include "${SRCDIR}/man/Makefile.inc"
