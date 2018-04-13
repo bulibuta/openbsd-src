@@ -226,7 +226,7 @@ futex_wait(uint32_t *uaddr, uint32_t val, const struct timespec *timeout)
 
 	error = rwsleep(p, &ftlock, PUSER|PCATCH, "fsleep", (int)to_ticks);
 	if (error == ERESTART)
-		error = EINTR;
+		error = EAGAIN;
 	else if (error == EWOULDBLOCK) {
 		/* A race occured between a wakeup and a timeout. */
 		if (p->p_futex == NULL)
