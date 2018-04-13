@@ -143,8 +143,8 @@ int
 pthread_rwlock_timedrdlock(pthread_rwlock_t *lockp,
     const struct timespec *abstime)
 {
-	if (abstime == NULL || abstime->tv_sec < 0 || abstime->tv_nsec < 0 ||
-	    abstime->tv_nsec > 1000000000)
+	if (abstime == NULL || abstime->tv_nsec < 0 ||
+	    abstime->tv_nsec >= 1000000000)
 		return (EINVAL);
 	return (_rthread_rwlock_rdlock(lockp, abstime, 0));
 }
@@ -210,8 +210,8 @@ int
 pthread_rwlock_timedwrlock(pthread_rwlock_t *lockp,
     const struct timespec *abstime)
 {
-	if (abstime == NULL || abstime->tv_sec < 0 || abstime->tv_nsec < 0 ||
-	    abstime->tv_nsec > 1000000000)
+	if (abstime == NULL || abstime->tv_nsec < 0 ||
+	    abstime->tv_nsec >= 1000000000)
 		return (EINVAL);
 	return (_rthread_rwlock_wrlock(lockp, abstime, 0));
 }

@@ -614,13 +614,17 @@ sys___thrsleep(struct proc *p, void *v, register_t *retval)
 	if (SCARG(uap, tp) != NULL) {
 		if ((error = copyin(SCARG(uap, tp), &ts, sizeof(ts)))) {
 			*retval = error;
-			return (0);
+			return 0;
+		}
+		if (ts.tv_nsec < 0 || ts.tv_nsec >= 1000000000) {
+			*retval = EINVAL;
+			return 0;
 		}
 		SCARG(uap, tp) = &ts;
 	}
 
 	*retval = thrsleep(p, uap);
-	return (0);
+	return 0;
 }
 
 int
