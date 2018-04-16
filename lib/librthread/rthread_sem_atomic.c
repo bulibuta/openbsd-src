@@ -84,7 +84,7 @@ _sem_wait(sem_t sem, int tryonly, const struct timespec *abstime,
 
 		atomic_inc_int(&sem->waitcount);
 		r = _twait(&sem->value, 0, CLOCK_REALTIME, abstime);
-		if (r == EAGAIN && (delayed_cancel == NULL || *delayed_cancel == 0))
+		if ((r == EAGAIN || r == EINTR) && (delayed_cancel == NULL || *delayed_cancel == 0))
 			r = 0;
 		atomic_dec_int(&sem->waitcount);
 	}
