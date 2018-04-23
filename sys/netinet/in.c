@@ -185,7 +185,9 @@ int
 in_control(struct socket *so, u_long cmd, caddr_t data, struct ifnet *ifp)
 {
 	int privileged;
+	int error;
 
+	NET_LOCK();
 	privileged = 0;
 	if ((so->so_state & SS_PRIV) != 0)
 		privileged++;
@@ -194,11 +196,16 @@ in_control(struct socket *so, u_long cmd, caddr_t data, struct ifnet *ifp)
 	switch (cmd) {
 	case SIOCGETVIFCNT:
 	case SIOCGETSGCNT:
-		return (mrt_ioctl(so, cmd, data));
+		error = mrt_ioctl(so, cmd, data);
+		goto out;
 	}
 #endif /* MROUTING */
 
-	return (in_ioctl(cmd, data, ifp, privileged));
+	error = in_ioctl(cmd, data, ifp, privileged);
+
+out:
+	NET_UNLOCK();
+	return error;
 }
 
 int

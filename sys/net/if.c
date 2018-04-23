@@ -2126,13 +2126,16 @@ ifioctl(struct socket *so, u_long cmd, caddr_t data, struct proc *p)
 			break;
 		/* FALLTHROUGH */
 	default:
-		NET_LOCK();
 		error = ((*so->so_proto->pr_usrreq)(so, PRU_CONTROL,
 			(struct mbuf *) cmd, (struct mbuf *) data,
 			(struct mbuf *) ifp, p));
-		if (error == EOPNOTSUPP)
+		if (error == EOPNOTSUPP) {
+			if (ifp->if_type != IFT_IEEE80211)
+				NET_LOCK();
 			error = ((*ifp->if_ioctl)(ifp, cmd, data));
-		NET_UNLOCK();
+			if (ifp->if_type != IFT_IEEE80211)
+				NET_UNLOCK();
+		}
 		break;
 	}
 
