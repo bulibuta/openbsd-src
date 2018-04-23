@@ -375,7 +375,8 @@ pthread_cond_timedwait(pthread_cond_t *condp, pthread_mutex_t *mutexp,
 		 * cancellation) then we should just go back to
 		 * sleep without changing state (timeouts, etc).
 		 */
-		if (error == EINTR && (tib->tib_canceled == 0 ||
+		if ((error == EINTR || error == ECANCELED) &&
+		    (tib->tib_canceled == 0 ||
 		    (tib->tib_cantcancel & CANCEL_DISABLED))) {
 			_spinlock(&mutex->lock);
 			continue;
@@ -514,7 +515,8 @@ pthread_cond_wait(pthread_cond_t *condp, pthread_mutex_t *mutexp)
 		 * cancellation) then we should just go back to
 		 * sleep without changing state (timeouts, etc).
 		 */
-		if (error == EINTR && (tib->tib_canceled == 0 ||
+		if ((error == EINTR || error == ECANCELED) &&
+		    (tib->tib_canceled == 0 ||
 		    (tib->tib_cantcancel & CANCEL_DISABLED))) {
 			_spinlock(&mutex->lock);
 			continue;

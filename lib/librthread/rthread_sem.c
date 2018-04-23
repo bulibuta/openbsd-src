@@ -75,8 +75,8 @@ _sem_wait(sem_t sem, int tryonly, const struct timespec *abstime,
 			    &sem->lock, delayed_cancel);
 			_spinlock(&sem->lock);
 			/* ignore interruptions other than cancelation */
-			if (r == EINTR && (delayed_cancel == NULL ||
-			    *delayed_cancel == 0))
+			if ((r == EINTR || r == ECANCELED) &&
+			    (delayed_cancel == NULL || *delayed_cancel == 0))
 				r = 0;
 		} while (r == 0 && sem->value == 0);
 		sem->waitcount--;

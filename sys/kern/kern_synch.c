@@ -592,7 +592,7 @@ out:
 	p->p_thrslpid = 0;
 
 	if (error == ERESTART)
-		error = EINTR;
+		error = ECANCELED;
 
 	return (error);
 
