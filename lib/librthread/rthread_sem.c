@@ -268,14 +268,15 @@ sem_timedwait(sem_t *semp, const struct timespec *abstime)
 	int r;
 	PREP_CANCEL_POINT(tib);
 
-	if (!_threads_ready)
-		_rthread_init();
-	self = tib->tib_thread;
-
-	if (!semp || !(sem = *semp)) {
+	if (!semp || !(sem = *semp) || abstime == NULL ||
+	    abstime->tv_nsec < 0 || abstime->tv_nsec >= 1000000000) {
 		errno = EINVAL;
 		return (-1);
 	}
+
+	if (!_threads_ready)
+		_rthread_init();
+	self = tib->tib_thread;
 
 	ENTER_DELAYED_CANCEL_POINT(tib, self);
 	r = _sem_wait(sem, 0, abstime, &self->delayed_cancel);
