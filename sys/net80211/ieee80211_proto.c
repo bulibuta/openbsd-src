@@ -992,7 +992,8 @@ justcleanup:
 			}
 			timeout_del(&ic->ic_bgscan_timeout);
 			ic->ic_bgscan_fail = 0;
-			ieee80211_free_allnodes(ic);
+			if (!(ic->ic_scan_lock & IEEE80211_SCAN_REQUEST))
+				ieee80211_free_allnodes(ic);
 			/* FALLTHROUGH */
 		case IEEE80211_S_AUTH:
 		case IEEE80211_S_ASSOC:
