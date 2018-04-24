@@ -2260,8 +2260,12 @@ ieee80211_listnodes(void)
 	if ((flags & IFF_UP) == 0) {
 		down = 1;
 		setifflags("up", IFF_UP);
+	} else {	/* force a background nodes update */
+		setifflags("down", -IFF_UP);
+		setifflags("restore", IFF_UP);
 	}
 
+#if 0
 	bzero(&ifr, sizeof(ifr));
 	strlcpy(ifr.ifr_name, name, sizeof(ifr.ifr_name));
 
@@ -2270,6 +2274,7 @@ ieee80211_listnodes(void)
 			printf("\t\tno permission to scan\n");
 		goto done;
 	}
+#endif
 
 	bzero(&na, sizeof(na));
 	bzero(&nr, sizeof(nr));
