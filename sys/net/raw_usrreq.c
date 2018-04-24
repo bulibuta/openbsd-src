@@ -54,10 +54,11 @@ raw_usrreq(struct socket *so, int req, struct mbuf *m, struct mbuf *nam,
 	int error = 0;
 	int len;
 
-	soassertlocked(so);
-
 	if (req == PRU_CONTROL)
 		return (EOPNOTSUPP);
+
+	soassertlocked(so);
+
 	if (control && control->m_len) {
 		m_freem(m);
 		return (EOPNOTSUPP);

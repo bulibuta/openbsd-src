@@ -1057,8 +1057,6 @@ udp_usrreq(struct socket *so, int req, struct mbuf *m, struct mbuf *addr,
 	struct inpcb *inp;
 	int error = 0;
 
-	soassertlocked(so);
-
 	if (req == PRU_CONTROL) {
 #ifdef INET6
 		if (sotopf(so) == PF_INET6)
@@ -1069,6 +1067,8 @@ udp_usrreq(struct socket *so, int req, struct mbuf *m, struct mbuf *addr,
 			return (in_control(so, (u_long)m, (caddr_t)addr,
 			    (struct ifnet *)control));
 	}
+
+	soassertlocked(so);
 
 	inp = sotoinpcb(so);
 	if (inp == NULL) {

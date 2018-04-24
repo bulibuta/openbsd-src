@@ -242,12 +242,13 @@ divert_usrreq(struct socket *so, int req, struct mbuf *m, struct mbuf *addr,
 	struct inpcb *inp = sotoinpcb(so);
 	int error = 0;
 
-	soassertlocked(so);
-
 	if (req == PRU_CONTROL) {
 		return (in_control(so, (u_long)m, (caddr_t)addr,
 		    (struct ifnet *)control));
 	}
+
+	soassertlocked(so);
+
 	if (inp == NULL) {
 		error = EINVAL;
 		goto release;

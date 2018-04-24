@@ -547,11 +547,11 @@ rip6_usrreq(struct socket *so, int req, struct mbuf *m, struct mbuf *nam,
 	struct inpcb *in6p = sotoinpcb(so);
 	int error = 0;
 
-	soassertlocked(so);
-
 	if (req == PRU_CONTROL)
 		return (in6_control(so, (u_long)m, (caddr_t)nam,
 		    (struct ifnet *)control));
+
+	soassertlocked(so);
 
 	switch (req) {
 	case PRU_DISCONNECT:

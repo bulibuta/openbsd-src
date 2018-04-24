@@ -131,8 +131,6 @@ tcp_usrreq(struct socket *so, int req, struct mbuf *m, struct mbuf *nam,
 	int error = 0;
 	short ostate;
 
-	soassertlocked(so);
-
 	if (req == PRU_CONTROL) {
 #ifdef INET6
 		if (sotopf(so) == PF_INET6)
@@ -143,6 +141,9 @@ tcp_usrreq(struct socket *so, int req, struct mbuf *m, struct mbuf *nam,
 			return (in_control(so, (u_long)m, (caddr_t)nam,
 			    (struct ifnet *)control));
 	}
+
+	soassertlocked(so);
+
 	if (control && control->m_len) {
 		m_freem(control);
 		m_freem(m);
