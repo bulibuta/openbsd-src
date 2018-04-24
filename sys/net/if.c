@@ -2130,11 +2130,9 @@ ifioctl(struct socket *so, u_long cmd, caddr_t data, struct proc *p)
 			(struct mbuf *) cmd, (struct mbuf *) data,
 			(struct mbuf *) ifp, p));
 		if (error == EOPNOTSUPP) {
-			if (ifp->if_type != IFT_IEEE80211)
-				NET_LOCK();
+			NET_LOCK();
 			error = ((*ifp->if_ioctl)(ifp, cmd, data));
-			if (ifp->if_type != IFT_IEEE80211)
-				NET_UNLOCK();
+			NET_UNLOCK();
 		}
 		break;
 	}
