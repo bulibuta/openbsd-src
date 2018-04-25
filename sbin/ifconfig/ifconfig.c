@@ -2255,26 +2255,21 @@ ieee80211_listnodes(void)
 	struct ieee80211_nodereq_all na;
 	struct ieee80211_nodereq nr[512];
 	struct ifreq ifr;
-	int i, down = 0;
+	int i;
 
 	if ((flags & IFF_UP) == 0) {
-		down = 1;
-		setifflags("up", IFF_UP);
-	} else {	/* force a background nodes update */
-		setifflags("down", -IFF_UP);
-		setifflags("restore", IFF_UP);
+		printf("\t\tcan not scan, interface is down\n");
+		return;
 	}
 
-#if 0
 	bzero(&ifr, sizeof(ifr));
 	strlcpy(ifr.ifr_name, name, sizeof(ifr.ifr_name));
 
 	if (ioctl(s, SIOCS80211SCAN, (caddr_t)&ifr) != 0) {
 		if (errno == EPERM)
 			printf("\t\tno permission to scan\n");
-		goto done;
+		return;
 	}
-#endif
 
 	bzero(&na, sizeof(na));
 	bzero(&nr, sizeof(nr));
@@ -2284,7 +2279,7 @@ ieee80211_listnodes(void)
 
 	if (ioctl(s, SIOCG80211ALLNODES, &na) != 0) {
 		warn("SIOCG80211ALLNODES");
-		goto done;
+		return;
 	}
 
 	if (!na.na_nodes)
@@ -2297,10 +2292,6 @@ ieee80211_listnodes(void)
 		ieee80211_printnode(&nr[i]);
 		putchar('\n');
 	}
-
- done:
-	if (down)
-		setifflags("restore", -IFF_UP);
 }
 
 void

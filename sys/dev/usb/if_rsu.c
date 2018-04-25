@@ -2313,9 +2313,6 @@ rsu_stop(struct ifnet *ifp)
 	ifp->if_flags &= ~IFF_RUNNING;
 	ifq_clr_oactive(&ifp->if_snd);
 
-	/* In case we were scanning, release the scan "lock". */
-	ic->ic_scan_lock = IEEE80211_SCAN_UNLOCKED;
-
 	s = splusb();
 	ieee80211_new_state(ic, IEEE80211_S_INIT, -1);
 	/* Wait for all async commands to complete. */

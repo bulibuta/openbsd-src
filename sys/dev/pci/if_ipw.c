@@ -2024,9 +2024,6 @@ ipw_stop(struct ifnet *ifp, int disable)
 	for (i = 0; i < IPW_NTBD; i++)
 		ipw_release_sbd(sc, &sc->stbd_list[i]);
 
-	/* in case we were scanning, release the scan "lock" */
-	ic->ic_scan_lock = IEEE80211_SCAN_UNLOCKED;
-
 	ieee80211_new_state(ic, IEEE80211_S_INIT, -1);
 }
 

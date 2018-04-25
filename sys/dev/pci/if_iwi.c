@@ -2291,9 +2291,6 @@ iwi_stop(struct ifnet *ifp, int disable)
 	ifp->if_flags &= ~IFF_RUNNING;
 	ifq_clr_oactive(&ifp->if_snd);
 
-	/* in case we were scanning, release the scan "lock" */
-	ic->ic_scan_lock = IEEE80211_SCAN_UNLOCKED;
-
 	ieee80211_new_state(ic, IEEE80211_S_INIT, -1);
 
 	iwi_stop_master(sc);
