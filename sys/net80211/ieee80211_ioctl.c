@@ -734,10 +734,6 @@ ieee80211_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 		break;
 #endif
 	case SIOCG80211ALLNODES:
-#ifndef IEEE80211_STA_ONLY
-		if (ic->ic_opmode == IEEE80211_M_HOSTAP)
-			break;
-#endif
 		if ((ifp->if_flags & (IFF_UP | IFF_RUNNING)) !=
 		    (IFF_UP | IFF_RUNNING)) {
 			error = ENETDOWN;
