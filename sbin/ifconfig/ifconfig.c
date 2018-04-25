@@ -2258,7 +2258,7 @@ ieee80211_listnodes(void)
 	int i;
 
 	if ((flags & IFF_UP) == 0) {
-		printf("\t\tcan not scan, interface is down\n");
+		printf("\t\tcannot scan, interface is down\n");
 		return;
 	}
 
