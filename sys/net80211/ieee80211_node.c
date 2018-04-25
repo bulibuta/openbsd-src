@@ -270,13 +270,12 @@ ieee80211_begin_scan(struct ifnet *ifp)
 				"active" : "passive");
 
 	/*
-	 * Flush any previously seen AP's. Note that the latter
+	 * Flush any previously seen AP's. Note that the latter 
 	 * assumes we don't act as both an AP and a station,
 	 * otherwise we'll potentially flush state of stations
 	 * associated with us.
 	 */
-	if (!(ic->ic_scan_lock & IEEE80211_SCAN_REQUEST))
-		ieee80211_free_allnodes(ic);
+	ieee80211_free_allnodes(ic);
 
 	/*
 	 * Reset the current mode. Setting the current mode will also
@@ -1373,10 +1372,6 @@ ieee80211_free_allnodes(struct ieee80211com *ic)
 {
 	struct ieee80211_node *ni;
 	int s;
-
-	/* Do not free from ifconfig */
-	if (!(ic->ic_scan_lock & IEEE80211_SCAN_REQUEST))
-		return;
 
 	DPRINTF(("freeing all nodes\n"));
 	s = splnet();
