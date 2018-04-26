@@ -2,6 +2,7 @@
 
 /*-
  * Copyright (c) 1999,2000,2001 Jonathan Lemon <jlemon@FreeBSD.org>
+ * Copyright (c) 2009 Apple, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -98,6 +99,11 @@ int	filt_timerattach(struct knote *kn);
 void	filt_timerdetach(struct knote *kn);
 int	filt_timer(struct knote *kn, long hint);
 void	filt_seltruedetach(struct knote *kn);
+int	filt_userattach(struct knote *kn);
+void	filt_userdetach(struct knote *kn);
+int	filt_user(struct knote *kn, long hint);
+void	filt_usertouch(struct knote *kn, struct kevent *kev, long type);
+
 
 struct filterops kqread_filtops =
 	{ 1, NULL, filt_kqdetach, filt_kqueue };
@@ -107,6 +113,9 @@ struct filterops file_filtops =
 	{ 1, filt_fileattach, NULL, NULL };
 struct filterops timer_filtops =
         { 0, filt_timerattach, filt_timerdetach, filt_timer };
+struct filterops user_filtops =
+	{ 0, filt_userattach, filt_userdetach, filt_user, filt_usertouch };
+
 
 struct	pool knote_pool;
 struct	pool kqueue_pool;
@@ -138,6 +147,7 @@ struct filterops *sysfilt_ops[] = {
 	&sig_filtops,			/* EVFILT_SIGNAL */
 	&timer_filtops,			/* EVFILT_TIMER */
 	&file_filtops,			/* EVFILT_DEVICE */
+	&user_filtops,			/* EVFILT_USER */
 };
 
 void KQREF(struct kqueue *);
@@ -384,6 +394,93 @@ filt_timer(struct knote *kn, long hint)
 	return (kn->kn_data != 0);
 }
 
+int
+filt_userattach(struct knote *kn)
+{
+
+	/*
+	 * EVFILT_USER knotes are not attached to anything in the kernel.
+	 */
+	kn->kn_hook = NULL;
+	if (kn->kn_fflags & NOTE_TRIGGER)
+		kn->kn_hookid = 1;
+	else
+		kn->kn_hookid = 0;
+	return (0);
+}
+
+void
+filt_userdetach(__unused struct knote *kn)
+{
+
+	/*
+	 * EVFILT_USER knotes are not attached to anything in the kernel.
+	 */
+}
+
+int
+filt_user(struct knote *kn, __unused long hint)
+{
+
+	return (kn->kn_hookid);
+}
+
+void
+filt_usertouch(struct knote *kn, struct kevent *kev, long type)
+{
+	int ffctrl;
+
+	switch (type) {
+	case EVENT_REGISTER:
+		if (kev->fflags & NOTE_TRIGGER)
+			kn->kn_hookid = 1;
+
+		ffctrl = kev->fflags & NOTE_FFCTRLMASK;
+		kev->fflags &= NOTE_FFLAGSMASK;
+		switch (ffctrl) {
+		case NOTE_FFNOP:
+			break;
+
+		case NOTE_FFAND:
+			kn->kn_sfflags &= kev->fflags;
+			break;
+
+		case NOTE_FFOR:
+			kn->kn_sfflags |= kev->fflags;
+			break;
+
+		case NOTE_FFCOPY:
+			kn->kn_sfflags = kev->fflags;
+			break;
+
+		default:
+			/* XXX Return error? */
+			break;
+		}
+		kn->kn_sdata = kev->data;
+		if (kev->flags & EV_CLEAR) {
+			kn->kn_hookid = 0;
+			kn->kn_data = 0;
+			kn->kn_fflags = 0;
+		}
+		break;
+
+        case EVENT_PROCESS:
+		*kev = kn->kn_kevent;
+		kev->fflags = kn->kn_sfflags;
+		kev->data = kn->kn_sdata;
+		if (kn->kn_flags & EV_CLEAR) {
+			kn->kn_hookid = 0;
+			kn->kn_data = 0;
+			kn->kn_fflags = 0;
+		}
+		break;
+
+	default:
+		panic("filt_usertouch() - invalid type (%ld)", type);
+		break;
+	}
+}
 
 /*
  * filt_seltrue:
@@ -560,7 +657,7 @@ kqueue_register(struct kqueue *kq, struct kevent *kev, struct proc *p)
 	struct filterops *fops = NULL;
 	struct file *fp = NULL;
 	struct knote *kn = NULL;
-	int s, error = 0;
+	int s, error = 0, event;
 
 	if (kev->filter < 0) {
 		if (kev->filter + EVFILT_SYSCOUNT < 0)
@@ -607,17 +704,11 @@ kqueue_register(struct kqueue *kq, struct kevent *kev, struct proc *p)
 		}
 	}
 
-	if (kn == NULL && ((kev->flags & EV_ADD) == 0)) {
-		error = ENOENT;
-		goto done;
-	}
-
 	/*
 	 * kn now contains the matching knote, or NULL if no match
 	 */
-	if (kev->flags & EV_ADD) {
-
-		if (kn == NULL) {
+	if (kn == NULL) {
+		if (kev->flags & EV_ADD) {
 			kn = knote_alloc();
 			if (kn == NULL) {
 				error = ENOMEM;
@@ -644,27 +735,45 @@ kqueue_register(struct kqueue *kq, struct kevent *kev, struct proc *p)
 				knote_drop(kn, p, fdp);
 				goto done;
 			}
+			goto done_ev_add;
 		} else {
-			/*
-			 * The user may change some filter values after the
-			 * initial EV_ADD, but doing so will not reset any
-			 * filters which have already been triggered.
-			 */
-			kn->kn_sfflags = kev->fflags;
-			kn->kn_sdata = kev->data;
-			kn->kn_kevent.udata = kev->udata;
+			/* No matching knote and the EV_ADD flag is not set. */
+			error = ENOENT;
+			goto done;
 		}
-
-		s = splhigh();
-		if (kn->kn_fop->f_event(kn, 0))
-			KNOTE_ACTIVATE(kn);
-		splx(s);
-
-	} else if (kev->flags & EV_DELETE) {
+	}
+	if (kev->flags & EV_DELETE) {
 		kn->kn_fop->f_detach(kn);
 		knote_drop(kn, p, p->p_fd);
 		goto done;
 	}
+
+	/*
+	 * The user may change some filter values after the
+	 * initial EV_ADD, but doing so will not reset any
+	 * filters which have already been triggered.
+	 */
+	kn->kn_kevent.udata = kev->udata;
+	if (!fops->f_isfd && fops->f_touch != NULL) {
+		fops->f_touch(kn, kev, EVENT_REGISTER);
+	} else {
+		kn->kn_sfflags = kev->fflags;
+		kn->kn_sdata = kev->data;
+	}
+
+	/*
+	 * We can get here with kn->kn_knlist == NULL.  This can happen when
+	 * the initial attach event decides that the event is "completed"
+	 * already.  i.e. filt_procattach is called on a zombie process.  It
+	 * will call filt_proc which will remove it from the list, and NULL
+	 * kn_knlist.
+	 */
+done_ev_add:
+	event = kn->kn_fop->f_event(kn, 0);
+	s = splhigh();
+	if (event)
+		KNOTE_ACTIVATE(kn);
+	splx(s);
 
 	if ((kev->flags & EV_DISABLE) &&
 	    ((kn->kn_status & KN_DISABLED) == 0)) {
@@ -697,7 +806,7 @@ kqueue_scan(struct kqueue *kq, int maxevents, struct kevent *ulistp,
 	struct kevent *kevp;
 	struct timeval atv, rtv, ttv;
 	struct knote *kn, marker;
-	int s, count, timeout, nkev = 0, error = 0;
+	int s, count, timeout, nkev = 0, error = 0, touch;
 	struct kevent kev[KQ_NEVENTS];
 
 	count = maxevents;
@@ -788,7 +897,12 @@ start:
 			kn->kn_status &= ~(KN_QUEUED | KN_ACTIVE);
 			continue;
 		}
-		*kevp = kn->kn_kevent;
+		touch = (!kn->kn_fop->f_isfd &&
+		    kn->kn_fop->f_touch != NULL);
+		if (touch)
+			kn->kn_fop->f_touch(kn, kevp, EVENT_PROCESS);
+		else
+			*kevp = kn->kn_kevent;
 		kevp++;
 		nkev++;
 		if (kn->kn_flags & EV_ONESHOT) {
@@ -799,8 +913,14 @@ start:
 			s = splhigh();
 		} else if (kn->kn_flags & (EV_CLEAR | EV_DISPATCH)) {
 			if (kn->kn_flags & EV_CLEAR) {
-				kn->kn_data = 0;
-				kn->kn_fflags = 0;
+				/*
+				 * Manually clear knotes who weren't
+				 * 'touch'ed.
+				 */
+				if (touch == 0) {
+					kn->kn_data = 0;
+					kn->kn_fflags = 0;
+				}
 			}
 			if (kn->kn_flags & EV_DISPATCH)
 				kn->kn_status |= KN_DISABLED;
