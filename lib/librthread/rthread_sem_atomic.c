@@ -58,20 +58,11 @@
  * Internal implementation of semaphores
  */
 int
-_sem_wait(sem_t sem, int tryonly, const struct timespec *abstime,
+_sem_wait(sem_t sem, int can_eintr, const struct timespec *abstime,
     int *delayed_cancel)
 {
 	int r = 0;
 	int v = sem->value, ov;
-
-	if (tryonly) {
-		while ((v = sem->value) > 0) {
-			ov = atomic_cas_uint(&sem->value, v, v - 1);
-			if (ov == v)
-				return 0;
-		}
-		return EAGAIN;
-	}
 
 	for (;;) {
 		while ((v = sem->value) > 0) {
@@ -84,14 +75,9 @@ _sem_wait(sem_t sem, int tryonly, const struct timespec *abstime,
 
 		atomic_inc_int(&sem->waitcount);
 		r = _twait(&sem->value, 0, CLOCK_REALTIME, abstime);
-		/*
-		 * Enable to get old semaphore functionality and pass existing
-		 * regression tests. Breaks at least posixsuite and lang/mono.
-		 *
-		 * if ((r == EAGAIN || r == EINTR) &&
-		 *     (delayed_cancel == NULL || *delayed_cancel == 0))
-		 */
-		if (r == EAGAIN && (delayed_cancel == NULL || *delayed_cancel == 0))
+		/* ignore interruptions other than cancelation */
+		if ((r == ECANCELED && *delayed_cancel == 0) ||
+		    (r == EINTR && !can_eintr))
 			r = 0;
 		atomic_dec_int(&sem->waitcount);
 	}
@@ -247,7 +233,7 @@ sem_wait(sem_t *semp)
 	}
 
 	ENTER_DELAYED_CANCEL_POINT(tib, self);
-	r = _sem_wait(sem, 0, NULL, &self->delayed_cancel);
+	r = _sem_wait(sem, 1, NULL, &self->delayed_cancel);
 	LEAVE_CANCEL_POINT_INNER(tib, r);
 
 	if (r) {
@@ -278,7 +264,7 @@ sem_timedwait(sem_t *semp, const struct timespec *abstime)
 	self = tib->tib_thread;
 
 	ENTER_DELAYED_CANCEL_POINT(tib, self);
-	r = _sem_wait(sem, 0, abstime, &self->delayed_cancel);
+	r = _sem_wait(sem, 1, abstime, &self->delayed_cancel);
 	LEAVE_CANCEL_POINT_INNER(tib, r);
 
 	if (r) {
@@ -293,21 +279,21 @@ int
 sem_trywait(sem_t *semp)
 {
 	sem_t sem;
-	int r;
+	int v, ov;
 
 	if (!semp || !(sem = *semp)) {
 		errno = EINVAL;
 		return (-1);
 	}
 
-	r = _sem_wait(sem, 1, NULL, NULL);
-
-	if (r) {
-		errno = r;
-		return (-1);
+	while ((v = sem->value) > 0) {
+		ov = atomic_cas_uint(&sem->value, v, v - 1);
+		if (ov == v)
+			return (0);
 	}
 
-	return (0);
+	errno = EAGAIN;
+	return (-1);
 }
 
 
