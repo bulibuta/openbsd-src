@@ -31,10 +31,7 @@ main(int argc, char **argv)
 	pthread_t th;
 	struct sigaction sa;
 	struct timespec ts, ts2;
-	int r;
 
-	sem_getvalue(&sem, &r);
-	printf("v = %d\n", r);
 	CHECKr(clock_gettime(CLOCK_REALTIME, &ts));
 	ts.tv_sec += 3;
 	CHECKn(sem_timedwait(&sem, &ts));
@@ -50,8 +47,6 @@ main(int argc, char **argv)
 	CHECKn(sem_destroy(&sem));
 	ASSERT(errno == EBUSY);
 
-	sem_getvalue(&sem, &r);
-	printf("%s: v = %d\n", __func__, r);
 	posted = 1;
 	CHECKr(sem_post(&sem));
 	CHECKr(pthread_join(th, NULL));
@@ -73,19 +68,12 @@ main(int argc, char **argv)
 	fprintf(stderr, "posting\n");
 	posted = 1;
 	eintr_ok = 0;
-	sem_getvalue(&sem, &r);
-	printf("%s: v = %d\n", __func__, r);
 	CHECKr(sem_post(&sem));
 	CHECKr(pthread_join(th, NULL));
 
-	sem_getvalue(&sem, &r);
-	printf("%s: v = %d\n", __func__, r);
 	CHECKr(clock_gettime(CLOCK_REALTIME, &ts));
 	ts.tv_sec += 2;
-	errno = 0;
-	r = sem_timedwait(&sem, &ts);
-	printf("%s: r = %d errno=%d\n", __func__, r, errno);
-	//CHECKn(sem_timedwait(&sem, &ts));
+	CHECKn(sem_timedwait(&sem, &ts));
 	ASSERT(errno == ETIMEDOUT);
 	CHECKr(clock_gettime(CLOCK_REALTIME, &ts2));
 	if (timespeccmp(&ts, &ts2, < ))
@@ -108,16 +96,10 @@ waiter(void *arg)
 	struct timespec ts;
 	int value;
 	int r;
-	time_t tic, toc;
 
-	sem_getvalue(&sem, &r);
-	printf("%s: v = %d\n", __func__,  r);
 	CHECKr(clock_gettime(CLOCK_REALTIME, &ts));
 	ts.tv_sec += 3;
-	time(&tic);
 	r = sem_timedwait(semp, &ts);
-	time(&toc);
-	printf("%s: t = %llds passed\n", __func__,  toc - tic);
 	CHECKr(sem_getvalue(semp, &value));
 	if (r == 0) {
 		ASSERT(value == 0);
@@ -132,6 +114,5 @@ waiter(void *arg)
 			ASSERT(value == 0);
 	}
 
-	printf("%s: ret v = %d\n", __func__,  value);
 	return (NULL);
 }
