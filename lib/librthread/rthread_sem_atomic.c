@@ -39,6 +39,12 @@
 #include "cancel.h"		/* in libc/include */
 #include "synch.h"
 
+#ifdef SEM_ATOMIC_DEBUG
+#define DPRINTF(x)	printf x
+#else
+#define DPRINTF(x)
+#endif
+
 #define SHARED_IDENT ((void *)-1)
 
 /* SHA256_DIGEST_STRING_LENGTH includes nul */
@@ -67,8 +73,10 @@ _sem_wait(sem_t sem, int can_eintr, const struct timespec *abstime,
 	for (;;) {
 		while ((v = sem->value) > 0) {
 			ov = atomic_cas_uint(&sem->value, v, v - 1);
-			if (ov == v)
+			if (ov == v) {
+				membar_enter_after_atomic();
 				return 0;
+			}
 		}
 		if (r)
 			break;
@@ -77,7 +85,7 @@ _sem_wait(sem_t sem, int can_eintr, const struct timespec *abstime,
 		r = _twait(&sem->value, 0, CLOCK_REALTIME, abstime);
 		/* ignore interruptions other than cancelation */
 		if ((r == ECANCELED && *delayed_cancel == 0) ||
-		    (r == EINTR && !can_eintr))
+		    (r == EINTR && !can_eintr) || r == EAGAIN)
 			r = 0;
 		atomic_dec_int(&sem->waitcount);
 	}
@@ -89,6 +97,7 @@ _sem_wait(sem_t sem, int can_eintr, const struct timespec *abstime,
 int
 _sem_post(sem_t sem)
 {
+	membar_exit_before_atomic();
 	atomic_inc_int(&sem->value);
 	_wake(&sem->value, 1);
 	return 0;
@@ -194,7 +203,9 @@ sem_getvalue(sem_t *semp, int *sval)
 		return (-1);
 	}
 
-	*sval = atomic_add_int_nv(&sem->value, 0);
+	//membar_exit_before_atomic();
+	//*sval = atomic_add_int_nv(&sem->value, 0);
+	*sval = sem->value;
 
 	return (0);
 }
@@ -238,6 +249,8 @@ sem_wait(sem_t *semp)
 
 	if (r) {
 		errno = r;
+		sem_getvalue(&sem, &r);
+		DPRINTF(("%s: v=%d errno=%d\n", __func__, r, errno));
 		return (-1);
 	}
 
@@ -269,6 +282,8 @@ sem_timedwait(sem_t *semp, const struct timespec *abstime)
 
 	if (r) {
 		errno = r == EWOULDBLOCK ? ETIMEDOUT : r;
+		sem_getvalue(&sem, &r);
+		DPRINTF(("%s: v=%d errno=%d\n", __func__, r, errno));
 		return (-1);
 	}
 
@@ -288,11 +303,15 @@ sem_trywait(sem_t *semp)
 
 	while ((v = sem->value) > 0) {
 		ov = atomic_cas_uint(&sem->value, v, v - 1);
-		if (ov == v)
+		if (ov == v) {
+			membar_enter_after_atomic();
 			return (0);
+		}
 	}
 
 	errno = EAGAIN;
+	sem_getvalue(&sem, &v);
+	DPRINTF(("%s: v=%d errno=%d\n", __func__, v, errno));
 	return (-1);
 }
 
