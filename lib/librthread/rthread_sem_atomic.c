@@ -249,8 +249,10 @@ sem_wait(sem_t *semp)
 
 	if (r) {
 		errno = r;
+#ifdef SEM_ATOMIC_DEBUG
 		sem_getvalue(&sem, &r);
 		DPRINTF(("%s: v=%d errno=%d\n", __func__, r, errno));
+#endif
 		return (-1);
 	}
 
@@ -282,8 +284,10 @@ sem_timedwait(sem_t *semp, const struct timespec *abstime)
 
 	if (r) {
 		errno = r == EWOULDBLOCK ? ETIMEDOUT : r;
+#ifdef SEM_ATOMIC_DEBUG
 		sem_getvalue(&sem, &r);
 		DPRINTF(("%s: v=%d errno=%d\n", __func__, r, errno));
+#endif
 		return (-1);
 	}
 
@@ -310,8 +314,10 @@ sem_trywait(sem_t *semp)
 	}
 
 	errno = EAGAIN;
+#ifdef SEM_ATOMIC_DEBUG
 	sem_getvalue(&sem, &v);
 	DPRINTF(("%s: v=%d errno=%d\n", __func__, v, errno));
+#endif
 	return (-1);
 }
 
