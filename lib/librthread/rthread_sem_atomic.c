@@ -62,7 +62,7 @@ _sem_wait(sem_t sem, int can_eintr, const struct timespec *abstime,
     int *delayed_cancel)
 {
 	int r = 0;
-	int v = sem->value, ov;
+	int v, ov;
 
 	for (;;) {
 		while ((v = sem->value) > 0) {
@@ -150,7 +150,6 @@ sem_init(sem_t *semp, int pshared, unsigned int value)
 		errno = ENOSPC;
 		return (-1);
 	}
-	sem->lock = _SPINLOCK_UNLOCKED;
 	sem->value = value;
 	*semp = sem;
 
@@ -197,8 +196,6 @@ sem_getvalue(sem_t *semp, int *sval)
 		return (-1);
 	}
 
-	//membar_exit_before_atomic();
-	//*sval = atomic_add_int_nv(&sem->value, 0);
 	*sval = sem->value;
 
 	return (0);
@@ -396,7 +393,6 @@ sem_open(const char *name, int oflag, ...)
 		return (SEM_FAILED);
 	}
 	if (created) {
-		sem->lock = _SPINLOCK_UNLOCKED;
 		sem->value = value;
 		sem->shared = 1;
 	}
