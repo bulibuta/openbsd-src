@@ -39,12 +39,6 @@
 #include "cancel.h"		/* in libc/include */
 #include "synch.h"
 
-#ifdef SEM_ATOMIC_DEBUG
-#define DPRINTF(x)	printf x
-#else
-#define DPRINTF(x)
-#endif
-
 #define SHARED_IDENT ((void *)-1)
 
 /* SHA256_DIGEST_STRING_LENGTH includes nul */
@@ -249,10 +243,8 @@ sem_wait(sem_t *semp)
 
 	if (r) {
 		errno = r;
-#ifdef SEM_ATOMIC_DEBUG
-		sem_getvalue(&sem, &r);
-		DPRINTF(("%s: v=%d errno=%d\n", __func__, r, errno));
-#endif
+		_rthread_debug(1, "%s: v=%d errno=%d\n", __func__,
+		    sem->value, errno);
 		return (-1);
 	}
 
@@ -284,10 +276,8 @@ sem_timedwait(sem_t *semp, const struct timespec *abstime)
 
 	if (r) {
 		errno = r == EWOULDBLOCK ? ETIMEDOUT : r;
-#ifdef SEM_ATOMIC_DEBUG
-		sem_getvalue(&sem, &r);
-		DPRINTF(("%s: v=%d errno=%d\n", __func__, r, errno));
-#endif
+		_rthread_debug(1, "%s: v=%d errno=%d\n", __func__,
+		    sem->value, errno);
 		return (-1);
 	}
 
@@ -314,10 +304,7 @@ sem_trywait(sem_t *semp)
 	}
 
 	errno = EAGAIN;
-#ifdef SEM_ATOMIC_DEBUG
-	sem_getvalue(&sem, &v);
-	DPRINTF(("%s: v=%d errno=%d\n", __func__, v, errno));
-#endif
+	_rthread_debug(1, "%s: v=%d errno=%d\n", __func__, sem->value, errno);
 	return (-1);
 }
 
