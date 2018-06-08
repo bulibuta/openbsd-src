@@ -38,9 +38,9 @@ SRCS=	rthread.c \
 # Architectures that implement atomics
 .if ${MACHINE_ARCH} == "amd64" || ${MACHINE_ARCH} == "i386" || \
     ${MACHINE_ARCH} == "mips64" || ${MACHINE_ARCH} == "mips64el"
-SRCS+=	rthread_sem_atomic.c
-.else
 SRCS+=	rthread_sem.c
+.else
+SRCS+=	rthread_sem_compat.c
 .endif
 
 SRCDIR= ${.CURDIR}/../libpthread
