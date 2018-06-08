@@ -64,25 +64,26 @@ _sem_wait(sem_t sem, int can_eintr, const struct timespec *abstime,
 	int r = 0;
 	int v, ov;
 
+	atomic_inc_int(&sem->waitcount);
 	for (;;) {
 		while ((v = sem->value) > 0) {
 			ov = atomic_cas_uint(&sem->value, v, v - 1);
 			if (ov == v) {
 				membar_enter_after_atomic();
+				atomic_dec_int(&sem->waitcount);
 				return 0;
 			}
 		}
 		if (r)
 			break;
 
-		atomic_inc_int(&sem->waitcount);
 		r = _twait(&sem->value, 0, CLOCK_REALTIME, abstime);
 		/* ignore interruptions other than cancelation */
 		if ((r == ECANCELED && *delayed_cancel == 0) ||
 		    (r == EINTR && !can_eintr) || r == EAGAIN)
 			r = 0;
-		atomic_dec_int(&sem->waitcount);
 	}
+	atomic_dec_int(&sem->waitcount);
 
 	return r;
 }
