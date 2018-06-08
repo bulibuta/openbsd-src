@@ -36,8 +36,10 @@ SRCS=	rthread.c \
 	sched_prio.c
 
 # Architectures that implement atomics
-.if ${MACHINE_ARCH} == "amd64" || ${MACHINE_ARCH} == "i386" || \
-    ${MACHINE_ARCH} == "mips64" || ${MACHINE_ARCH} == "mips64el"
+.if ${MACHINE_ARCH} == "aarch64" || \
+    ${MACHINE_ARCH} == "amd64" || ${MACHINE_ARCH} == "i386" || \
+    ${MACHINE_ARCH} == "mips64" || ${MACHINE_ARCH} == "mips64el" || \
+    ${MACHINE_ARCH} == "sparc64"
 SRCS+=	rthread_sem.c
 .else
 SRCS+=	rthread_sem_compat.c
