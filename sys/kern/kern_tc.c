@@ -35,7 +35,7 @@
 #include <sys/queue.h>
 #include <sys/malloc.h>
 #include <dev/rndvar.h>
-#include <sys/timekeep.h>
+#include <sys/vdso.h>
 
 /*
  * A large step happens on boot.  This constant detects such steps.
@@ -211,28 +211,29 @@ microuptime(struct timeval *tvp)
 }
 
 void
-tc_clock_gettime(void)
+update_vdso(void)
 {
-	struct bintime bt;
+	struct timehands *th;
+	struct timecounter *tc;
+	u_int gen;
 
-	if (timekeep == NULL)
+	if (vdso == NULL)
 		return;
 
-	/* CLOCK_REALTIME */
-	nanotime(&timekeep->tp_realtime);
+	do {
+		th = timehands;
+		tc = th->th_counter;
 
-	/* CLOCK_UPTIME */
-	binuptime(&bt);
-	bintimesub(&bt, &naptime, &bt);
-	BINTIME_TO_TIMESPEC(&bt, &timekeep->tp_uptime);
+		atomic_inc_int(&vdso->lock);
 
-	/* CLOCK_MONOTONIC */
-	nanouptime(&timekeep->tp_monotonic);
+		vdso->scale = th->th_scale;
+		vdso->mask = tc->tc_counter_mask;
+		vdso->offset_count = th->th_offset_count;
+		vdso->boottime = th->th_boottime;
+		vdso->offset = th->th_offset;
 
-	/* CLOCK_BOOTTIME */
-	timekeep->tp_boottime = timekeep->tp_monotonic;
-
-	return;
+		atomic_inc_int(&vdso->lock);
+	} while (gen == 0 || gen != th->th_generation);
 }
 
 void
@@ -634,7 +635,7 @@ tc_windup(struct bintime *new_boottime, struct bintime *new_offset,
 	membar_producer();
 	timehands = th;
 
-	tc_clock_gettime();
+	update_vdso();
 }
 
 /* Report or change the active timecounter hardware. */
