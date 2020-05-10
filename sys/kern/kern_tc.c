@@ -35,6 +35,7 @@
 #include <sys/queue.h>
 #include <sys/malloc.h>
 #include <dev/rndvar.h>
+#include <sys/vdso.h>
 
 /*
  * A large step happens on boot.  This constant detects such steps.
@@ -210,28 +211,29 @@ microuptime(struct timeval *tvp)
 }
 
 void
-binruntime(struct bintime *bt)
+update_vdso(void)
 {
 	struct timehands *th;
+	struct timecounter *tc;
 	u_int gen;
+
+	if (vdso == NULL)
+		return;
 
 	do {
 		th = timehands;
-		gen = th->th_generation;
-		membar_consumer();
-		bintimeaddfrac(&th->th_offset, th->th_scale * tc_delta(th), bt);
-		bintimesub(bt, &th->th_naptime, bt);
-		membar_consumer();
+		tc = th->th_counter;
+
+		atomic_inc_int(&vdso->lock);
+
+		vdso->scale = th->th_scale;
+		vdso->mask = tc->tc_counter_mask;
+		vdso->offset_count = th->th_offset_count;
+		vdso->boottime = th->th_boottime;
+		vdso->offset = th->th_offset;
+
+		atomic_inc_int(&vdso->lock);
 	} while (gen == 0 || gen != th->th_generation);
-}
-
-void
-nanoruntime(struct timespec *ts)
-{
-	struct bintime bt;
-
-	binruntime(&bt);
-	BINTIME_TO_TIMESPEC(&bt, ts);
 }
 
 void
@@ -632,6 +634,8 @@ tc_windup(struct bintime *new_boottime, struct bintime *new_offset,
 	time_uptime = th->th_offset.sec;
 	membar_producer();
 	timehands = th;
+
+	update_vdso();
 }
 
 /* Report or change the active timecounter hardware. */

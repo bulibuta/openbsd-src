@@ -64,6 +64,11 @@
 #include <uvm/uvm_extern.h>
 #include <machine/tcb.h>
 
+#include <sys/vdso.h>
+
+struct uvm_object *vdso_object;
+struct vdso* vdso;
+
 void	unveil_destroy(struct process *ps);
 
 const struct kmem_va_mode kv_exec = {
@@ -75,6 +80,11 @@ const struct kmem_va_mode kv_exec = {
  * Map the shared signal code.
  */
 int exec_sigcode_map(struct process *, struct emul *);
+
+/*
+ * Map the shared vdso page.
+ */
+int exec_vdso_map(struct process *);
 
 /*
  * If non-zero, stackgap_random specifies the upper limit of the random gap size
@@ -684,6 +694,9 @@ sys_execve(struct proc *p, void *v, register_t *retval)
 	/* map the process's signal trampoline code */
 	if (exec_sigcode_map(pr, pack.ep_emul))
 		goto free_pack_abort;
+	/* map the process's vdso page */
+	if (exec_vdso_map(pr))
+		goto free_pack_abort;
 
 #ifdef __HAVE_EXEC_MD_MAP
 	/* perform md specific mappings that process might need */
@@ -860,6 +873,80 @@ exec_sigcode_map(struct process *pr, struct emul *e)
 	/* Calculate PC at point of sigreturn entry */
 	pr->ps_sigcoderet = pr->ps_sigcode +
 	    (pr->ps_emul->e_esigret - pr->ps_emul->e_sigcode);
+
+	return (0);
+}
+
+#if 0
+int
+exec_vdso_map(struct process *pr, struct exec_package *pack)
+{
+	vaddr_t va;
+	int rc;
+
+	if (CPU_HAS_FPU(ci))
+		return 0;
+
+	/*
+	 * If we are running with FPU instruction emulation, we need
+	 * to allocate a special page in the process' address space,
+	 * in order to be able to emulate delay slot instructions of
+	 * successful conditional branches.
+	 */
+
+	va = 0;
+	rc = uvm_map(&p->p_vmspace->vm_map, &va, PAGE_SIZE, NULL,
+	    UVM_UNKNOWN_OFFSET, 0,
+	    UVM_MAPFLAG(PROT_NONE, PROT_MASK, MAP_INHERIT_COPY,
+	      MADV_NORMAL, UVM_FLAG_COPYONW));
+	if (rc != 0)
+		return rc;
+//#ifdef DEBUG
+	printf("%s: p %p fppgva %p\n", __func__, p, (void *)va);
+//#endif
+	p->p_p->ps_vdso = va;
+
+	return 0;
+}
+#endif
+
+int exec_vdso_map(struct process *pr)
+{
+	size_t vdso_sz;
+
+	vdso_sz = sizeof(struct vdso);
+
+	/*
+	 * Similar to the sigcode object, except that there is a single vdso
+	 * object, and not one per emulation.
+	 */
+	if (vdso_object == NULL) {
+		vaddr_t va;
+
+		vdso_object = uao_create(vdso_sz, 0);
+		uao_reference(vdso_object);
+
+		if (uvm_map(kernel_map, &va, round_page(vdso_sz), vdso_object,
+		    0, 0, UVM_MAPFLAG(PROT_READ | PROT_WRITE, PROT_READ | PROT_WRITE,
+		    MAP_INHERIT_SHARE, MADV_RANDOM, 0))) {
+			uao_detach(vdso_object);
+			return (ENOMEM);
+		}
+
+		vdso = (struct vdso *)va;
+
+		/* XXX: Inital value? */
+		memset(vdso, 0x42, round_page(vdso_sz));
+		vdso->lock = 0;
+	}
+
+	uao_reference(vdso_object);
+	if (uvm_map(&pr->ps_vmspace->vm_map, &pr->ps_vdso, round_page(vdso_sz),
+	    vdso_object, 0, 0, UVM_MAPFLAG(PROT_READ, PROT_READ,
+	    MAP_INHERIT_COPY, MADV_RANDOM, 0))) {
+		uao_detach(vdso_object);
+		return (ENOMEM);
+	}
 
 	return (0);
 }

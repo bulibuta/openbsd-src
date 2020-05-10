@@ -248,6 +248,8 @@ struct process {
 	u_int	ps_rtableid;		/* Process routing table/domain. */
 	char	ps_nice;		/* Process "nice" value. */
 
+	vaddr_t ps_vdso; 		/* User pointer to vdso */
+
 	struct uprof {			/* profile arguments */
 		caddr_t	pr_base;	/* buffer base */
 		size_t  pr_size;	/* buffer size */
