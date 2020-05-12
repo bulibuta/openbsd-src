@@ -1,5 +1,6 @@
 /*	$OpenBSD$ */
 /*
+ * Copyright (c) 2019 Nicolas Manichon <nicolas.manichon@epita.fr>
  * Copyright (c) 2020 Paul Irofti <paul@irofti.net>
  *
  * Permission to use, copy, modify, and distribute this software for any
@@ -17,11 +18,9 @@
 
 #include <stdlib.h>
 #include <time.h>
-#include <err.h>
+#include <errno.h>
 
-#include <sys/timekeep.h>
-
-void *elf_aux_timekeep;
+#include <elf.h>
 
 
 /*
@@ -36,31 +35,61 @@ typedef struct {
 	uint64_t	au_v;				/* 64-bit value */
 } AuxInfo;
 
-enum AuxID {
-	AUX_null = 0,
-	AUX_ignore = 1,
-	AUX_execfd = 2,
-	AUX_phdr = 3,			/* &phdr[0] */
-	AUX_phent = 4,			/* sizeof(phdr[0]) */
-	AUX_phnum = 5,			/* # phdr entries */
-	AUX_pagesz = 6,			/* PAGESIZE */
-	AUX_base = 7,			/* ld.so base addr */
-	AUX_flags = 8,			/* processor flags */
-	AUX_entry = 9,			/* a.out entry */
-	AUX_sun_uid = 2000,		/* euid */
-	AUX_sun_ruid = 2001,		/* ruid */
-	AUX_sun_gid = 2002,		/* egid */
-	AUX_sun_rgid = 2003,		/* rgid */
-	AUX_openbsd_timekeep = 2004,	/* userland clock_gettime */
+
+/*
+ * Needed microtime(9) implementation.
+ * To be exposed by the kernel later if needed.
+ */
+
+#include <sys/time.h>
+
+struct bintime {
+	time_t sec;
+	uint64_t frac;
 };
 
+static __inline void bintimeaddfrac(const struct bintime *bt, uint64_t x,
+				    struct bintime *ct) {
+	ct->sec = bt->sec;
+	if (bt->frac > bt->frac + x) ct->sec++;
+	ct->frac = bt->frac + x;
+}
+
+static __inline void bintimeadd(const struct bintime *bt,
+				const struct bintime *ct, struct bintime *dt) {
+	dt->sec = bt->sec + ct->sec;
+	if (bt->frac > bt->frac + ct->frac) dt->sec++;
+	dt->frac = bt->frac + ct->frac;
+}
+
+static inline void
+BINTIME_TO_TIMESPEC(const struct bintime *bt, struct timespec *ts)
+{
+	ts->tv_sec = bt->sec;
+	ts->tv_nsec = (long)(((uint64_t)1000000000 * (uint32_t)(bt->frac >> 32)) >> 32);
+}
+
+static __inline uint64_t rdtsc(void) {
+	uint32_t hi, lo;
+
+	__asm volatile("rdtsc" : "=d"(hi), "=a"(lo));
+	return (((uint64_t)hi << 32) | (uint64_t)lo);
+}
+
+static __inline u_int tc_delta(u_int count, uint64_t mask, u_int offset) {
+	return (count - offset) & mask;
+}
+
+#include <sys/vdso.h>
+
+void *elf_aux_vdso;
 
 /*
  * Helper functions.
  */
 
-int
-find_timekeep(void)
+static void
+find_vdso(void)
 {
 	Elf_Addr *stackp;
 	AuxInfo *auxv;
@@ -68,42 +97,41 @@ find_timekeep(void)
 	stackp = (Elf_Addr *)environ;
 	while (*stackp++) ;		/* pass environment */
 
-	/* look-up timekeep auxv */
-	for (auxv = (AuxInfo *)stackp; auxv->au_id != AUX_null; auxv++)
-		if (auxv->au_id == AUX_openbsd_timekeep) {
-			elf_aux_timekeep = (void *)auxv->au_v;
+	auxv = (AuxInfo *)stackp;
+	for (; auxv->au_id != 4242; auxv++) ;	/* look-up vdso auxv */
+
+	elf_aux_vdso = (void *)auxv->au_v;
+}
+
+static int
+gettime(struct vdso *vdso, struct timespec *tp) {
+	while (1) {
+		uint32_t v = vdso->lock;
+		if (v % 2 == 0) {
+			struct bintime bt = vdso->offset;
+			struct bintime boottime = vdso->boottime;
+
+			u_int delta = tc_delta(rdtsc(), vdso->mask,
+			    vdso->offset_count);
+			bintimeadd(&bt, &boottime, &bt);
+			bintimeaddfrac(&bt, vdso->scale * delta, &bt);
+			BINTIME_TO_TIMESPEC(&bt, tp);
+
+			if (vdso->lock != v)
+				continue;
 			return 0;
 		}
-
-	warnx("%s", "Could not find auxv!");
+	}
 	return -1;
 }
 
 int
 WRAP(clock_gettime)(clockid_t clock_id, struct timespec *tp)
 {
-	struct timekeep *timekeep;
-
-	if (elf_aux_timekeep == NULL && find_timekeep())
+	if (elf_aux_vdso == NULL)
+		find_vdso();
+	if (gettime(elf_aux_vdso, tp) < 0)
 		return clock_gettime(clock_id, tp);
-	timekeep = elf_aux_timekeep;
-
-	switch (clock_id) {
-	case CLOCK_REALTIME:
-		*tp = timekeep->tp_realtime;
-		break;
-	case CLOCK_UPTIME:
-		*tp = timekeep->tp_uptime;
-		break;
-	case CLOCK_MONOTONIC:
-		*tp = timekeep->tp_monotonic;
-		break;
-	case CLOCK_BOOTTIME:
-		*tp = timekeep->tp_boottime;
-		break;
-	default:
-		return clock_gettime(clock_id, tp);
-	}
 	return 0;
 }
 DEF_WRAP(clock_gettime);
