@@ -107,7 +107,7 @@ void *elf_aux_vdso;
  * Helper functions.
  */
 
-static void
+static int
 find_vdso(void)
 {
 	Elf_Addr *stackp;
@@ -125,14 +125,17 @@ find_vdso(void)
 		}
 	if (found == 0) {
 		warnx("%s", "Could not find auxv!");
-		return;
+		return -1;
 	}
 
 	elf_aux_vdso = (void *)auxv->au_v;
+	return 0;
 }
 
+#if 0
 static int
-gettime(struct vdso *vdso, struct timespec *tp) {
+gettime(struct vdso *vdso, struct timespec *tp)
+{
 	while (1) {
 		uint32_t v = vdso->lock;
 		if (v % 2 == 0) {
@@ -152,14 +155,33 @@ gettime(struct vdso *vdso, struct timespec *tp) {
 	}
 	return -1;
 }
+#endif
 
 int
 WRAP(clock_gettime)(clockid_t clock_id, struct timespec *tp)
 {
-	if (elf_aux_vdso == NULL)
-		find_vdso();
-	if (gettime(elf_aux_vdso, tp) < 0)
+	struct vdso *vdso;
+
+	if (elf_aux_vdso == NULL && find_vdso())
 		return clock_gettime(clock_id, tp);
+	vdso = elf_aux_vdso;
+
+	switch (clock_id) {
+	case CLOCK_REALTIME:
+		*tp = vdso->tp_realtime;
+		break;
+	case CLOCK_UPTIME:
+		*tp = vdso->tp_uptime;
+		break;
+	case CLOCK_MONOTONIC:
+		*tp = vdso->tp_monotonic;
+		break;
+	case CLOCK_BOOTTIME:
+		*tp = vdso->tp_boottime;
+		break;
+	default:
+		return clock_gettime(clock_id, tp);
+	}
 	return 0;
 }
 DEF_WRAP(clock_gettime);

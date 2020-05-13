@@ -211,6 +211,31 @@ microuptime(struct timeval *tvp)
 }
 
 void
+tc_clock_gettime(void)
+{
+	struct bintime bt;
+
+	if (vdso == NULL)
+		return;
+
+	/* CLOCK_REALTIME */
+	nanotime(&vdso->tp_realtime);
+
+	/* CLOCK_UPTIME */
+	binuptime(&bt);
+	bintimesub(&bt, &naptime, &bt);
+	BINTIME_TO_TIMESPEC(&bt, &vdso->tp_uptime);
+
+	/* CLOCK_MONOTONIC */
+	nanouptime(&vdso->tp_monotonic);
+
+	/* CLOCK_BOOTTIME */
+	vdso->tp_boottime = vdso->tp_monotonic;
+
+	return;
+}
+
+void
 update_vdso(void)
 {
 	struct timehands *th;
@@ -635,7 +660,8 @@ tc_windup(struct bintime *new_boottime, struct bintime *new_offset,
 	membar_producer();
 	timehands = th;
 
-	update_vdso();
+	//update_vdso();
+	tc_clock_gettime();
 }
 
 /* Report or change the active timecounter hardware. */
