@@ -692,7 +692,7 @@ enum AuxID {
 	AUX_sun_ruid = 2001,		/* ruid */
 	AUX_sun_gid = 2002,		/* egid */
 	AUX_sun_rgid = 2003,		/* rgid */
-	AUX_openbsd_vdso = 4242,
+	AUX_openbsd_timekeep = 2004,	/* userland clock_gettime */
 };
 
 struct elf_args {

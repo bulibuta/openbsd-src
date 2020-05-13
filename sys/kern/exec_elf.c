@@ -860,8 +860,8 @@ exec_elf_fixup(struct proc *p, struct exec_package *epp)
 		a->au_v = ap->arg_entry;
 		a++;
 
-		a->au_id = AUX_openbsd_vdso;
-		a->au_v = p->p_p->ps_vdso;
+		a->au_id = AUX_openbsd_timekeep;
+		a->au_v = p->p_p->ps_timekeep;
 		a++;
 
 		a->au_id = AUX_null;

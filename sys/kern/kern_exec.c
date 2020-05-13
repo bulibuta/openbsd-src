@@ -64,10 +64,10 @@
 #include <uvm/uvm_extern.h>
 #include <machine/tcb.h>
 
-#include <sys/vdso.h>
+#include <sys/timekeep.h>
 
-struct uvm_object *vdso_object;
-struct vdso* vdso;
+struct uvm_object *timekeep_object;
+struct timekeep* timekeep;
 
 void	unveil_destroy(struct process *ps);
 
@@ -82,9 +82,9 @@ const struct kmem_va_mode kv_exec = {
 int exec_sigcode_map(struct process *, struct emul *);
 
 /*
- * Map the shared vdso page.
+ * Map the shared timekeep page.
  */
-int exec_vdso_map(struct process *);
+int exec_timekeep_map(struct process *);
 
 /*
  * If non-zero, stackgap_random specifies the upper limit of the random gap size
@@ -694,8 +694,8 @@ sys_execve(struct proc *p, void *v, register_t *retval)
 	/* map the process's signal trampoline code */
 	if (exec_sigcode_map(pr, pack.ep_emul))
 		goto free_pack_abort;
-	/* map the process's vdso page */
-	if (exec_vdso_map(pr))
+	/* map the process's timekeep page */
+	if (exec_timekeep_map(pr))
 		goto free_pack_abort;
 
 #ifdef __HAVE_EXEC_MD_MAP
@@ -877,74 +877,35 @@ exec_sigcode_map(struct process *pr, struct emul *e)
 	return (0);
 }
 
-#if 0
-int
-exec_vdso_map(struct process *pr, struct exec_package *pack)
+int exec_timekeep_map(struct process *pr)
 {
-	vaddr_t va;
-	int rc;
-
-	if (CPU_HAS_FPU(ci))
-		return 0;
+	size_t timekeep_sz = sizeof(struct timekeep);
 
 	/*
-	 * If we are running with FPU instruction emulation, we need
-	 * to allocate a special page in the process' address space,
-	 * in order to be able to emulate delay slot instructions of
-	 * successful conditional branches.
-	 */
-
-	va = 0;
-	rc = uvm_map(&p->p_vmspace->vm_map, &va, PAGE_SIZE, NULL,
-	    UVM_UNKNOWN_OFFSET, 0,
-	    UVM_MAPFLAG(PROT_NONE, PROT_MASK, MAP_INHERIT_COPY,
-	      MADV_NORMAL, UVM_FLAG_COPYONW));
-	if (rc != 0)
-		return rc;
-//#ifdef DEBUG
-	printf("%s: p %p fppgva %p\n", __func__, p, (void *)va);
-//#endif
-	p->p_p->ps_vdso = va;
-
-	return 0;
-}
-#endif
-
-int exec_vdso_map(struct process *pr)
-{
-	size_t vdso_sz;
-
-	vdso_sz = sizeof(struct vdso);
-
-	/*
-	 * Similar to the sigcode object, except that there is a single vdso
+	 * Similar to the sigcode object, except that there is a single timekeep
 	 * object, and not one per emulation.
 	 */
-	if (vdso_object == NULL) {
+	if (timekeep_object == NULL) {
 		vaddr_t va;
 
-		vdso_object = uao_create(vdso_sz, 0);
-		uao_reference(vdso_object);
+		timekeep_object = uao_create(timekeep_sz, 0);
+		uao_reference(timekeep_object);
 
-		if (uvm_map(kernel_map, &va, round_page(vdso_sz), vdso_object,
+		if (uvm_map(kernel_map, &va, round_page(timekeep_sz), timekeep_object,
 		    0, 0, UVM_MAPFLAG(PROT_READ | PROT_WRITE, PROT_READ | PROT_WRITE,
 		    MAP_INHERIT_SHARE, MADV_RANDOM, 0))) {
-			uao_detach(vdso_object);
+			uao_detach(timekeep_object);
 			return (ENOMEM);
 		}
 
-		vdso = (struct vdso *)va;
-
-		/* XXX: Inital value? */
-		memset(vdso, 0x42, round_page(vdso_sz));
-		vdso->lock = 0;
+		timekeep = (struct timekeep *)va;
 	}
 
-	uao_reference(vdso_object);
-	if (uvm_map(&pr->ps_vmspace->vm_map, &pr->ps_vdso, round_page(vdso_sz),
-	    vdso_object, 0, 0, UVM_MAPFLAG(PROT_READ, PROT_READ,
+	uao_reference(timekeep_object);
+	if (uvm_map(&pr->ps_vmspace->vm_map, &pr->ps_timekeep, round_page(timekeep_sz),
+	    timekeep_object, 0, 0, UVM_MAPFLAG(PROT_READ, PROT_READ,
 	    MAP_INHERIT_COPY, MADV_RANDOM, 0))) {
-		uao_detach(vdso_object);
+		uao_detach(timekeep_object);
 		return (ENOMEM);
 	}
 
