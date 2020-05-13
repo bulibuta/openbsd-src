@@ -11,11 +11,16 @@ struct vdso {
 	uint64_t mask;
 	u_int offset_count;
 	u_int lock;
+
+	struct timespec tp_realtime;
+	struct timespec tp_uptime;
+	struct timespec tp_monotonic;
+	struct timespec tp_boottime;
 };
 
 extern struct uvm_object *vdso_object;
 extern struct vdso *vdso;
 
-void update_vdso(void);
+//void update_vdso(void);
 
 #endif /* _SYS_VDSO_H_ */
