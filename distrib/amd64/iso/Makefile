@@ -26,7 +26,7 @@ TEMPLATE=	${.CURDIR}/template
 
 all: ${FS} ${CDROM}
 
-${FS}: ${BASE} ${XBASE} bsd.gz
+${FS}: ${BASE} bsd.gz
 	dd if=/dev/zero of=${FS} bs=512 count=${TOTALSIZE}
 	vnconfig -v ${FS} > vnd
 	fdisk -yi -l ${FSSIZE} -b ${MSDOSSIZE} -f ${DESTDIR}/usr/mdec/mbr `cat vnd`
@@ -54,27 +54,27 @@ ${FS}: ${BASE} ${XBASE} bsd.gz
 	ln ${MOUNT_POINT}/bsd ${MOUNT_POINT}/bsd.rd
 
 	cp -p ${BASE} ${MOUNT_POINT}/${OSREV}/${MACHINE}
-	cp -p ${XBASE} ${MOUNT_POINT}/${OSREV}/${MACHINE}
+	#cp -p ${XBASE} ${MOUNT_POINT}/${OSREV}/${MACHINE}
 
-	cat ${RELDIR}/SHA256 ${RELXDIR}/SHA256 > \
-	    ${MOUNT_POINT}/${OSREV}/${MACHINE}/SHA256
+	#cat ${RELDIR}/SHA256 ${RELXDIR}/SHA256 > \
+	#    ${MOUNT_POINT}/${OSREV}/${MACHINE}/SHA256
 	# XXX no SHA256.sig
 	df -i ${MOUNT_POINT}
 	umount ${MOUNT_POINT}
 	vnconfig -u `cat vnd`
 	rm -f vnd
 
-${CDROM}: ${BASE} ${XBASE}
+${CDROM}: ${BASE}
 	rm -rf ${.OBJDIR}/cd-dir
 	mkdir -p ${.OBJDIR}/cd-dir/${OSREV}/${MACHINE}
 	mkdir -p ${.OBJDIR}/cd-dir/etc
 	echo "set image /${OSREV}/${MACHINE}/bsd.rd" > ${.OBJDIR}/cd-dir/etc/boot.conf
 
 	cp -p ${BASE} ${.OBJDIR}/cd-dir/${OSREV}/${MACHINE}
-	cp -p ${XBASE} ${.OBJDIR}/cd-dir/${OSREV}/${MACHINE}
+	#cp -p ${XBASE} ${.OBJDIR}/cd-dir/${OSREV}/${MACHINE}
 
-	cat ${RELDIR}/SHA256 ${RELXDIR}/SHA256 > \
-	    ${.OBJDIR}/cd-dir/${OSREV}/${MACHINE}/SHA256
+	#cat ${RELDIR}/SHA256 ${RELXDIR}/SHA256 > \
+	#    ${.OBJDIR}/cd-dir/${OSREV}/${MACHINE}/SHA256
 	# XXX no SHA256.sig
 
 	cp -p ${RELDIR}/cdbr ${.OBJDIR}/cd-dir/${OSREV}/${MACHINE}
