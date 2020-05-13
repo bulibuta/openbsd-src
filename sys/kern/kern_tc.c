@@ -35,7 +35,7 @@
 #include <sys/queue.h>
 #include <sys/malloc.h>
 #include <dev/rndvar.h>
-#include <sys/vdso.h>
+#include <sys/timekeep.h>
 
 /*
  * A large step happens on boot.  This constant detects such steps.
@@ -215,50 +215,24 @@ tc_clock_gettime(void)
 {
 	struct bintime bt;
 
-	if (vdso == NULL)
+	if (timekeep == NULL)
 		return;
 
 	/* CLOCK_REALTIME */
-	nanotime(&vdso->tp_realtime);
+	nanotime(&timekeep->tp_realtime);
 
 	/* CLOCK_UPTIME */
 	binuptime(&bt);
 	bintimesub(&bt, &naptime, &bt);
-	BINTIME_TO_TIMESPEC(&bt, &vdso->tp_uptime);
+	BINTIME_TO_TIMESPEC(&bt, &timekeep->tp_uptime);
 
 	/* CLOCK_MONOTONIC */
-	nanouptime(&vdso->tp_monotonic);
+	nanouptime(&timekeep->tp_monotonic);
 
 	/* CLOCK_BOOTTIME */
-	vdso->tp_boottime = vdso->tp_monotonic;
+	timekeep->tp_boottime = timekeep->tp_monotonic;
 
 	return;
-}
-
-void
-update_vdso(void)
-{
-	struct timehands *th;
-	struct timecounter *tc;
-	u_int gen;
-
-	if (vdso == NULL)
-		return;
-
-	do {
-		th = timehands;
-		tc = th->th_counter;
-
-		atomic_inc_int(&vdso->lock);
-
-		vdso->scale = th->th_scale;
-		vdso->mask = tc->tc_counter_mask;
-		vdso->offset_count = th->th_offset_count;
-		vdso->boottime = th->th_boottime;
-		vdso->offset = th->th_offset;
-
-		atomic_inc_int(&vdso->lock);
-	} while (gen == 0 || gen != th->th_generation);
 }
 
 void
@@ -660,7 +634,6 @@ tc_windup(struct bintime *new_boottime, struct bintime *new_offset,
 	membar_producer();
 	timehands = th;
 
-	//update_vdso();
 	tc_clock_gettime();
 }
 
