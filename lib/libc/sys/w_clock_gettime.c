@@ -19,6 +19,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <errno.h>
+#include <err.h>
 
 #include <elf.h>
 
@@ -34,6 +35,24 @@ typedef struct {
 	uint32_t	au_id;				/* 32-bit id */
 	uint64_t	au_v;				/* 64-bit value */
 } AuxInfo;
+
+enum AuxID {
+	AUX_null = 0,
+	AUX_ignore = 1,
+	AUX_execfd = 2,
+	AUX_phdr = 3,			/* &phdr[0] */
+	AUX_phent = 4,			/* sizeof(phdr[0]) */
+	AUX_phnum = 5,			/* # phdr entries */
+	AUX_pagesz = 6,			/* PAGESIZE */
+	AUX_base = 7,			/* ld.so base addr */
+	AUX_flags = 8,			/* processor flags */
+	AUX_entry = 9,			/* a.out entry */
+	AUX_sun_uid = 2000,		/* euid */
+	AUX_sun_ruid = 2001,		/* ruid */
+	AUX_sun_gid = 2002,		/* egid */
+	AUX_sun_rgid = 2003,		/* rgid */
+	AUX_openbsd_vdso = 4242,
+};
 
 
 /*
@@ -93,12 +112,21 @@ find_vdso(void)
 {
 	Elf_Addr *stackp;
 	AuxInfo *auxv;
+	int found = 0;
 
 	stackp = (Elf_Addr *)environ;
 	while (*stackp++) ;		/* pass environment */
 
-	auxv = (AuxInfo *)stackp;
-	for (; auxv->au_id != 4242; auxv++) ;	/* look-up vdso auxv */
+	/* look-up vdso auxv */
+	for (auxv = (AuxInfo *)stackp; auxv->au_id != AUX_null; auxv++)
+		if (auxv->au_id == AUX_openbsd_vdso) {
+			found = 1;
+			break;
+		}
+	if (found == 0) {
+		warnx("%s", "Could not find auxv!");
+		return;
+	}
 
 	elf_aux_vdso = (void *)auxv->au_v;
 }
