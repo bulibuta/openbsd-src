@@ -80,10 +80,14 @@ dlerror(void)
 	return "Wrong dl symbols!\n";
 }
 
+extern void *elf_aux_timekeep;
+extern int find_timekeep(void);
+
 int
 dl_iterate_phdr(int (*callback)(struct dl_phdr_info *, size_t, void *),
 	void *data)
 {
+	find_timekeep();
 	if (_dl_cb != NULL && _dl_cb->dl_iterate_phdr != NULL)
 		return _dl_cb->dl_iterate_phdr(callback, data);
 #ifndef PIC

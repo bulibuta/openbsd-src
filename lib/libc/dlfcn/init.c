@@ -69,6 +69,9 @@ extern Elf_Ehdr __executable_start[] __attribute__((weak));
 /* provide definitions for these */
 const dl_cb *_dl_cb __relro = NULL;
 
+extern void *elf_aux_timekeep;
+extern int find_timekeep(void);
+
 void _libc_preinit(int, char **, char **, dl_cb_cb *) __dso_hidden;
 void
 _libc_preinit(int argc, char **argv, char **envp, dl_cb_cb *cb)
@@ -126,6 +129,7 @@ _libc_preinit(int argc, char **argv, char **envp, dl_cb_cb *cb)
 	if (cb == NULL)
 		setup_static_tib(phdr, phnum);
 #endif /* !PIC */
+	find_timekeep();
 }
 
 /* ARM just had to be different... */

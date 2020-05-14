@@ -59,12 +59,11 @@ enum AuxID {
  * Helper functions.
  */
 
-static int
+int
 find_timekeep(void)
 {
 	Elf_Addr *stackp;
 	AuxInfo *auxv;
-	int found = 0;
 
 	stackp = (Elf_Addr *)environ;
 	while (*stackp++) ;		/* pass environment */
@@ -72,16 +71,12 @@ find_timekeep(void)
 	/* look-up timekeep auxv */
 	for (auxv = (AuxInfo *)stackp; auxv->au_id != AUX_null; auxv++)
 		if (auxv->au_id == AUX_openbsd_timekeep) {
-			found = 1;
-			break;
+			elf_aux_timekeep = (void *)auxv->au_v;
+			return 0;
 		}
-	if (found == 0) {
-		warnx("%s", "Could not find auxv!");
-		return -1;
-	}
 
-	elf_aux_timekeep = (void *)auxv->au_v;
-	return 0;
+	warnx("%s", "Could not find auxv!");
+	return -1;
 }
 
 int
