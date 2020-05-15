@@ -44,7 +44,7 @@ SRCS+=	${CANCEL:%=w_%.c} w_pread.c w_preadv.c w_pwrite.c w_pwritev.c
 ASM=	__semctl.o __syscall.o __thrsigdivert.o \
 	access.o acct.o adjfreq.o adjtime.o \
 	bind.o chdir.o chflags.o chflagsat.o chmod.o chown.o chroot.o \
-	clock_getres.o clock_gettime.o clock_settime.o \
+	clock_getres.o clock_settime.o \
 	dup.o dup2.o dup3.o \
 	execve.o \
 	faccessat.o fchdir.o fchflags.o fchmod.o fchmodat.o fchown.o \
@@ -110,7 +110,7 @@ PPSEUDO_NOERR=${PSEUDO_NOERR:.o=.po}
 SPSEUDO_NOERR=${PSEUDO_NOERR:.o=.so}
 DPSEUDO_NOERR=${PSEUDO_NOERR:.o=.do}
 
-HIDDEN= ___realpath.o ___getcwd.o fork.o sigaction.o _ptrace.o ${CANCEL:=.o}
+HIDDEN= ___realpath.o ___getcwd.o fork.o sigaction.o _ptrace.o ${CANCEL:=.o} clock_gettime.o
 PHIDDEN=${HIDDEN:.o=.po}
 SHIDDEN=${HIDDEN:.o=.so}
 DHIDDEN=${HIDDEN:.o=.do}
