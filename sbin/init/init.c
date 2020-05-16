@@ -38,6 +38,7 @@
 #include <sys/sysctl.h>
 #include <sys/time.h>
 #include <sys/tree.h>
+#include <sys/syscall.h>
 #include <sys/wait.h>
 #include <machine/cpu.h>
 
@@ -1039,7 +1040,7 @@ start_getty(session_t *sp)
 	}
 
 	if (timespecisset(&sp->se_started)) {
-		clock_gettime(CLOCK_MONOTONIC, &current_time);
+		syscall(SYS_clock_gettime, CLOCK_MONOTONIC, &current_time);
 		timespecsub(&current_time, &sp->se_started, &elapsed);
 		if (elapsed.tv_sec < GETTY_SPACING) {
 			warning(
@@ -1103,7 +1104,7 @@ collect_child(pid_t pid)
 	}
 
 	sp->se_process = pid;
-	clock_gettime(CLOCK_MONOTONIC, &sp->se_started);
+	syscall(SYS_clock_gettime, CLOCK_MONOTONIC, &sp->se_started);
 	add_session(sp);
 }
 
@@ -1170,7 +1171,7 @@ f_multi_user(void)
 			break;
 		}
 		sp->se_process = pid;
-		clock_gettime(CLOCK_MONOTONIC, &sp->se_started);
+		syscall(SYS_clock_gettime, CLOCK_MONOTONIC, &sp->se_started);
 		add_session(sp);
 	}
 
