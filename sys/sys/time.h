@@ -163,6 +163,13 @@ struct clockinfo {
 };
 #endif /* __BSD_VISIBLE */
 
+struct timekeep {
+	struct timespec tp_realtime;
+	struct timespec tp_uptime;
+	struct timespec tp_monotonic;
+	struct timespec tp_boottime;
+};
+
 #if defined(_KERNEL) || defined(_STANDALONE)
 #include <sys/_time.h>
 
@@ -396,6 +403,8 @@ TIMESPEC_TO_NSEC(const struct timespec *ts)
 	return ts->tv_sec * 1000000000ULL + ts->tv_nsec;
 }
 
+extern struct uvm_object *timekeep_object;
+extern struct timekeep *timekeep;
 #else /* !_KERNEL */
 #include <time.h>
 

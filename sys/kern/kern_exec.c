@@ -64,7 +64,7 @@
 #include <uvm/uvm_extern.h>
 #include <machine/tcb.h>
 
-#include <sys/timekeep.h>
+#include <sys/time.h>
 
 struct uvm_object *timekeep_object;
 struct timekeep* timekeep;

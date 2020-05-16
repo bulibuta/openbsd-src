@@ -19,7 +19,7 @@
 #include <time.h>
 #include <err.h>
 
-#include <sys/timekeep.h>
+#include <sys/time.h>
 
 void *elf_aux_timekeep;
 
