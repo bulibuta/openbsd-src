@@ -31,7 +31,6 @@
  *
  */
 
-#include <sys/time.h>
 #include <sys/types.h>
 #include <blf.h>
 #include <ctype.h>
