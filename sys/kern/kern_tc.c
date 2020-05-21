@@ -211,28 +211,28 @@ microuptime(struct timeval *tvp)
 }
 
 void
-tc_clock_gettime(void)
+binruntime(struct bintime *bt)
+{
+	struct timehands *th;
+	u_int gen;
+
+	do {
+		th = timehands;
+		gen = th->th_generation;
+		membar_consumer();
+		bintimeaddfrac(&th->th_offset, th->th_scale * tc_delta(th), bt);
+		bintimesub(bt, &th->th_naptime, bt);
+		membar_consumer();
+	} while (gen == 0 || gen != th->th_generation);
+}
+
+void
+nanoruntime(struct timespec *ts)
 {
 	struct bintime bt;
 
-	if (timekeep == NULL)
-		return;
-
-	/* CLOCK_REALTIME */
-	nanotime(&timekeep->tp_realtime);
-
-	/* CLOCK_UPTIME */
-	binuptime(&bt);
-	bintimesub(&bt, &naptime, &bt);
-	BINTIME_TO_TIMESPEC(&bt, &timekeep->tp_uptime);
-
-	/* CLOCK_MONOTONIC */
-	nanouptime(&timekeep->tp_monotonic);
-
-	/* CLOCK_BOOTTIME */
-	timekeep->tp_boottime = timekeep->tp_monotonic;
-
-	return;
+	binruntime(&bt);
+	BINTIME_TO_TIMESPEC(&bt, ts);
 }
 
 void
@@ -479,6 +479,27 @@ tc_setclock(const struct timespec *ts)
 		timeout_adjust_ticks(adj_ticks);
 	}
 #endif
+}
+
+void
+tc_clock_gettime(void)
+{
+	if (timekeep == NULL)
+		return;
+
+	/* CLOCK_REALTIME */
+	nanotime(&timekeep->tp_realtime);
+
+	/* CLOCK_UPTIME */
+	nanoruntime(&timekeep->tp_uptime);
+
+	/* CLOCK_MONOTONIC */
+	nanouptime(&timekeep->tp_monotonic);
+
+	/* CLOCK_BOOTTIME */
+	timekeep->tp_boottime = timekeep->tp_monotonic;
+
+	return;
 }
 
 /*
