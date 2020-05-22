@@ -23,6 +23,23 @@
 
 void *elf_aux_timekeep;
 
+/*
+ * TODO:
+ *   - /sbin/init init_main.c!start_init() map page? (deraadt@)
+ *   - structure timekeep naming bikeshed (deraadt@)
+ *   - structure may need _ or __ to avoid potential collision (deraadt@)
+ *   - high resolution time sources (deraadt@)
+ *      o CLOCK_MONOTONIC -> nanouptime -> binuptime -> bintemaddfrac
+ *        -> tc_delta(th) reproduce in userland (kettenis@)
+ *   - atomic read time (deraadt@)
+ *      o generation mechanism like the timehands (kettenis@)
+ *   - find_timekeep() called 3 times, call only once (deraadt@)
+ *   - versioning mechanism for shared page (kettenis@)
+ *      o s.t. libc can verify it understands the kernel iface
+ *      o major/minor at the start of the page
+ *      o if version check fails -> fallback to system call
+ *   - AT_TIMEKEEP at 2000 (kettenis@)
+ */
 
 /*
  * Needed exec_elf implementation.
