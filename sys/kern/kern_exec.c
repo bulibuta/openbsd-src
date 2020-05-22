@@ -877,7 +877,8 @@ exec_sigcode_map(struct process *pr, struct emul *e)
 	return (0);
 }
 
-int exec_timekeep_map(struct process *pr)
+int
+exec_timekeep_map(struct process *pr)
 {
 	size_t timekeep_sz = sizeof(struct timekeep);
 
