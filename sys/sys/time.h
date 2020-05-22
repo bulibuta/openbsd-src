@@ -163,7 +163,7 @@ struct clockinfo {
 };
 #endif /* __BSD_VISIBLE */
 
-struct timekeep {
+struct __timekeep {
 	uint8_t major;		/* version major number */
 	uint8_t minor;		/* version minor number */
 
@@ -408,7 +408,7 @@ TIMESPEC_TO_NSEC(const struct timespec *ts)
 }
 
 extern struct uvm_object *timekeep_object;
-extern struct timekeep *timekeep;
+extern struct __timekeep *timekeep;
 #else /* !_KERNEL */
 #include <time.h>
 

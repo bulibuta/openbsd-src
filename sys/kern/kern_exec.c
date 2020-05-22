@@ -67,7 +67,7 @@
 #include <sys/time.h>
 
 struct uvm_object *timekeep_object;
-struct timekeep* timekeep;
+struct __timekeep* timekeep;
 
 void	unveil_destroy(struct process *ps);
 
@@ -880,7 +880,7 @@ exec_sigcode_map(struct process *pr, struct emul *e)
 int
 exec_timekeep_map(struct process *pr)
 {
-	size_t timekeep_sz = sizeof(struct timekeep);
+	size_t timekeep_sz = sizeof(struct __timekeep);
 
 	/*
 	 * Similar to the sigcode object, except that there is a single timekeep
@@ -899,7 +899,7 @@ exec_timekeep_map(struct process *pr)
 			return (ENOMEM);
 		}
 
-		timekeep = (struct timekeep *)va;
+		timekeep = (struct __timekeep *)va;
 		timekeep->major = 0;
 		timekeep->minor = 0;
 

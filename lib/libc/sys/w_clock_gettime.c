@@ -26,7 +26,6 @@ void *elf_aux_timekeep;
 /*
  * TODO:
  *   - structure timekeep naming bikeshed (deraadt@)
- *   - structure may need _ or __ to avoid potential collision (deraadt@)
  *   - high resolution time sources (deraadt@)
  *      o CLOCK_MONOTONIC -> nanouptime -> binuptime -> bintemaddfrac
  *        -> tc_delta(th) reproduce in userland (kettenis@)
@@ -42,10 +41,13 @@ void *elf_aux_timekeep;
  *           kernel: gen mechanism is already used by the functions called,
  *           added seq timekeep counter
  *           user: added gen-based mechanism based on seq
+ *        PROBLEMS:
+ *           might need to change after high-res clock addition...
  *   - versioning mechanism for shared page (kettenis@)
  *      o s.t. libc can verify it understands the kernel iface
  *      o major/minor at the start of the page
  *      o if version check fails -> fallback to system call
+ *   - structure may need _ or __ to avoid potential collision (deraadt@)
  */
 
 /*
@@ -111,7 +113,7 @@ find_timekeep(void)
 int
 WRAP(clock_gettime)(clockid_t clock_id, struct timespec *tp)
 {
-	struct timekeep *timekeep;
+	struct __timekeep *timekeep;
 	unsigned int seq;
 
 	if (elf_aux_timekeep == NULL && find_timekeep())
