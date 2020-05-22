@@ -487,6 +487,8 @@ tc_clock_gettime(void)
 	if (timekeep == NULL)
 		return;
 
+	atomic_inc_int(&timekeep->seq);
+
 	/* CLOCK_REALTIME */
 	nanotime(&timekeep->tp_realtime);
 

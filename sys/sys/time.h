@@ -164,6 +164,7 @@ struct clockinfo {
 #endif /* __BSD_VISIBLE */
 
 struct timekeep {
+	volatile unsigned int seq;
 	struct timespec tp_realtime;
 	struct timespec tp_uptime;
 	struct timespec tp_monotonic;

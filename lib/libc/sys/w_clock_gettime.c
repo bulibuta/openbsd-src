@@ -25,7 +25,6 @@ void *elf_aux_timekeep;
 
 /*
  * TODO:
- *   - /sbin/init init_main.c!start_init() map page? (deraadt@)
  *   - structure timekeep naming bikeshed (deraadt@)
  *   - structure may need _ or __ to avoid potential collision (deraadt@)
  *   - high resolution time sources (deraadt@)
@@ -33,12 +32,19 @@ void *elf_aux_timekeep;
  *        -> tc_delta(th) reproduce in userland (kettenis@)
  *   - atomic read time (deraadt@)
  *      o generation mechanism like the timehands (kettenis@)
- *   - find_timekeep() called 3 times, call only once (deraadt@)
+ *        SOLUTION:
+ *           kernel: gen mechanism is already used by the functions called
+ *           user: added a similar mechanism
  *   - versioning mechanism for shared page (kettenis@)
  *      o s.t. libc can verify it understands the kernel iface
  *      o major/minor at the start of the page
  *      o if version check fails -> fallback to system call
  *   - AT_TIMEKEEP at 2000 (kettenis@)
+ *
+ * FIXED:
+ *   - /sbin/init init_main.c!start_init() map page? (deraadt@)
+ *      -> not there, the page should be mapped by sys_execve() call
+ *   - find_timekeep() called 3 times, call only once (deraadt@)
  */
 
 /*
@@ -105,6 +111,7 @@ int
 WRAP(clock_gettime)(clockid_t clock_id, struct timespec *tp)
 {
 	struct timekeep *timekeep;
+	unsigned int seq;
 
 	if (elf_aux_timekeep == NULL && find_timekeep())
 		return clock_gettime(clock_id, tp);
@@ -112,16 +119,28 @@ WRAP(clock_gettime)(clockid_t clock_id, struct timespec *tp)
 
 	switch (clock_id) {
 	case CLOCK_REALTIME:
-		*tp = timekeep->tp_realtime;
+		do {
+			seq = timekeep->seq;
+			*tp = timekeep->tp_realtime;
+		} while (seq == 0 || seq != timekeep->seq);
 		break;
 	case CLOCK_UPTIME:
-		*tp = timekeep->tp_uptime;
+		do {
+			seq = timekeep->seq;
+			*tp = timekeep->tp_uptime;
+		} while (seq == 0 || seq != timekeep->seq);
 		break;
 	case CLOCK_MONOTONIC:
-		*tp = timekeep->tp_monotonic;
+		do {
+			seq = timekeep->seq;
+			*tp = timekeep->tp_monotonic;
+		} while (seq == 0 || seq != timekeep->seq);
 		break;
 	case CLOCK_BOOTTIME:
-		*tp = timekeep->tp_boottime;
+		do {
+			seq = timekeep->seq;
+			*tp = timekeep->tp_boottime;
+		} while (seq == 0 || seq != timekeep->seq);
 		break;
 	default:
 		return clock_gettime(clock_id, tp);

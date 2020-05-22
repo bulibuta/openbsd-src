@@ -900,6 +900,7 @@ exec_timekeep_map(struct process *pr)
 		}
 
 		timekeep = (struct timekeep *)va;
+		timekeep->seq = 0;
 	}
 
 	uao_reference(timekeep_object);
