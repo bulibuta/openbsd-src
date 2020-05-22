@@ -164,11 +164,14 @@ struct clockinfo {
 #endif /* __BSD_VISIBLE */
 
 struct timekeep {
-	volatile unsigned int seq;
-	struct timespec tp_realtime;
-	struct timespec tp_uptime;
-	struct timespec tp_monotonic;
-	struct timespec tp_boottime;
+	uint8_t major;		/* version major number */
+	uint8_t minor;		/* version minor number */
+
+	volatile unsigned int seq;	/* synchronization */
+	struct timespec tp_realtime;	/* CLOCK_REALTIME */
+	struct timespec tp_uptime;	/* CLOCK_UPTIME */
+	struct timespec tp_monotonic;	/* CLOCK_MONOTONIC */
+	struct timespec tp_boottime;	/* CLOCK_BOOTTIME */
 };
 
 #if defined(_KERNEL) || defined(_STANDALONE)
