@@ -24,6 +24,10 @@
 extern PROTO_NORMAL(tzname);
 #endif
 
+__BEGIN_HIDDEN_DECLS
+extern void	*_timekeep;
+__END_HIDDEN_DECLS
+
 PROTO_NORMAL(asctime);
 PROTO_NORMAL(asctime_r);
 PROTO_STD_DEPRECATED(clock);

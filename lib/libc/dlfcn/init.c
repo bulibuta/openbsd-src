@@ -30,6 +30,7 @@
 #include <link.h>
 #include <stdlib.h>		/* atexit */
 #include <string.h>
+#include <time.h>
 #include <unistd.h>
 
 #include "init.h"
@@ -45,8 +46,9 @@
 /* XXX should be in an include file shared with csu */
 char	***_csu_finish(char **_argv, char **_envp, void (*_cleanup)(void));
 
-/* provide definition for this */
+/* provide definition for these */
 int	_pagesize = 0;
+void	*_timekeep = NULL;
 
 /*
  * In dynamicly linked binaries environ and __progname are overriden by
@@ -105,6 +107,9 @@ _libc_preinit(int argc, char **argv, char **envp, dl_cb_cb *cb)
 			phnum = aux->au_v;
 			break;
 #endif /* !PIC */
+		case AUX_openbsd_timekeep:
+			_timekeep = (void *)aux->au_v;
+			break;
 		}
 	}
 
