@@ -38,7 +38,6 @@
 #include <sys/sysctl.h>
 #include <sys/time.h>
 #include <sys/tree.h>
-#include <sys/syscall.h>
 #include <sys/wait.h>
 #include <machine/cpu.h>
 
