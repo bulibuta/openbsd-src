@@ -30,7 +30,7 @@
 #include <link.h>
 #include <stdlib.h>		/* atexit */
 #include <string.h>
-#include <time.h>
+#include <time.h>		/* timekeep */
 #include <unistd.h>
 
 #include "init.h"
