@@ -172,6 +172,7 @@ struct __timekeep {
 	struct timespec tp_uptime;	/* CLOCK_UPTIME */
 	struct timespec tp_monotonic;	/* CLOCK_MONOTONIC */
 	struct timespec tp_boottime;	/* CLOCK_BOOTTIME */
+	struct timeval tp_microtime;	/* gettimeofday(2) */
 };
 
 #if defined(_KERNEL) || defined(_STANDALONE)

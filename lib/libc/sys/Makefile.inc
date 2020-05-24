@@ -13,7 +13,7 @@ SRCS+=	Ovfork.S brk.S ${CERROR} \
 # glue to offer userland wrappers for some syscalls
 SRCS+=	posix_madvise.c pthread_sigmask.c \
 	w_fork.c w_sigaction.c w_sigprocmask.c w_sigsuspend.c w_vfork.c \
-	w_clock_gettime.c
+	w_clock_gettime.c w_gettimeofday.c
 
 # glue for compat with old syscall interfaces.
 SRCS+=	ftruncate.c lseek.c mquery.c mmap.c ptrace.c semctl.c truncate.c \
@@ -55,7 +55,7 @@ ASM=	__semctl.o __syscall.o __thrsigdivert.o \
 	getgroups.o getitimer.o getpeername.o getpgid.o \
 	getpriority.o getresgid.o getresuid.o \
 	getrlimit.o getrusage.o getsid.o getsockname.o \
-	getsockopt.o gettimeofday.o ioctl.o \
+	getsockopt.o ioctl.o \
 	kevent.o kill.o kqueue.o ktrace.o lchown.o \
 	link.o linkat.o listen.o lstat.o madvise.o \
 	minherit.o mkdir.o mkdirat.o mkfifo.o mkfifoat.o \
@@ -110,7 +110,8 @@ PPSEUDO_NOERR=${PSEUDO_NOERR:.o=.po}
 SPSEUDO_NOERR=${PSEUDO_NOERR:.o=.so}
 DPSEUDO_NOERR=${PSEUDO_NOERR:.o=.do}
 
-HIDDEN= ___realpath.o ___getcwd.o fork.o sigaction.o _ptrace.o ${CANCEL:=.o} clock_gettime.o
+HIDDEN= ___realpath.o ___getcwd.o fork.o sigaction.o _ptrace.o ${CANCEL:=.o} \
+	clock_gettime.o gettimeofday.o
 PHIDDEN=${HIDDEN:.o=.po}
 SHIDDEN=${HIDDEN:.o=.so}
 DHIDDEN=${HIDDEN:.o=.do}

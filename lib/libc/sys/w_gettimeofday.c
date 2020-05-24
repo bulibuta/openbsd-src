@@ -1,6 +1,6 @@
-/*	$OpenBSD: time.h,v 1.1 2015/09/11 15:38:33 guenther Exp $	*/
+/*	$OpenBSD$ */
 /*
- * Copyright (c) 2015 Philip Guenther <guenther@openbsd.org>
+ * Copyright (c) 2020 Robert Nagy <robert@openbsd.org>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -15,18 +15,27 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#ifndef _LIBC_SYS_TIME_H_
-#define _LIBC_SYS_TIME_H_
+#include <sys/time.h>
 
-#include_next <sys/time.h>
+int
+WRAP(gettimeofday)(struct timeval *tp, struct timezone *tzp)
+{
+	struct __timekeep *timekeep = _timekeep;
+	unsigned int seq;
 
-PROTO_NORMAL(adjfreq);
-PROTO_NORMAL(adjtime);
-PROTO_NORMAL(futimes);
-PROTO_NORMAL(getitimer);
-PROTO_WRAP(gettimeofday);
-PROTO_NORMAL(setitimer);
-PROTO_NORMAL(settimeofday);
-PROTO_NORMAL(utimes);
+	if (timekeep == NULL || timekeep->minor < 1)
+		return gettimeofday(tp, tzp);
 
-#endif /* !_LIBC_SYS_TIME_H_ */
+	if (tp) {
+		do {
+			seq = timekeep->seq;
+			*tp = timekeep->tp_microtime;
+		} while (seq == 0 || seq != timekeep->seq);
+	}
+
+	if (tzp)
+		return gettimeofday(tp, tzp);
+
+	return 0;
+}
+DEF_WRAP(gettimeofday);

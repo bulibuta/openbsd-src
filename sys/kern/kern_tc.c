@@ -482,7 +482,7 @@ tc_setclock(const struct timespec *ts)
 }
 
 void
-tc_clock_gettime(void)
+tc_update_timekeep(void)
 {
 	if (timekeep == NULL)
 		return;
@@ -500,6 +500,9 @@ tc_clock_gettime(void)
 
 	/* CLOCK_BOOTTIME */
 	timekeep->tp_boottime = timekeep->tp_monotonic;
+
+	/* gettimeofday(2) */
+	microtime(&timekeep->tp_microtime);
 
 	return;
 }
@@ -657,7 +660,7 @@ tc_windup(struct bintime *new_boottime, struct bintime *new_offset,
 	membar_producer();
 	timehands = th;
 
-	tc_clock_gettime();
+	tc_update_timekeep();
 }
 
 /* Report or change the active timecounter hardware. */
