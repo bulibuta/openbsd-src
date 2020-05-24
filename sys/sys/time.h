@@ -163,6 +163,12 @@ struct clockinfo {
 };
 #endif /* __BSD_VISIBLE */
 
+/* Time expressed as seconds and fractions of a second + operations on it. */
+struct bintime {
+	time_t	sec;
+	uint64_t frac;
+};
+
 struct __timekeep {
 	uint8_t major;		/* version major number */
 	uint8_t minor;		/* version minor number */
@@ -173,16 +179,16 @@ struct __timekeep {
 	struct timespec tp_monotonic;	/* CLOCK_MONOTONIC */
 	struct timespec tp_boottime;	/* CLOCK_BOOTTIME */
 	struct timeval tp_microtime;	/* gettimeofday(2) */
+
+	u_int64_t		th_scale;		/* [w] */
+	u_int	 		th_offset_count;	/* [w] */
+	struct bintime		th_offset;		/* [w] */
+	volatile u_int		th_generation;		/* [w] */
+	u_int 			tc_counter_mask;	/* [I] */
 };
 
 #if defined(_KERNEL) || defined(_STANDALONE)
 #include <sys/_time.h>
-
-/* Time expressed as seconds and fractions of a second + operations on it. */
-struct bintime {
-	time_t	sec;
-	uint64_t frac;
-};
 
 #define bintimecmp(btp, ctp, cmp)					\
 	((btp)->sec == (ctp)->sec ?					\
