@@ -23,7 +23,7 @@ WRAP(gettimeofday)(struct timeval *tp, struct timezone *tzp)
 	struct __timekeep *timekeep = _timekeep;
 	unsigned int seq;
 
-	if (timekeep == NULL || timekeep->minor < 1)
+	if (timekeep == NULL)
 		return gettimeofday(tp, tzp);
 
 	if (tp) {

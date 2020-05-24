@@ -901,7 +901,7 @@ exec_timekeep_map(struct process *pr)
 
 		timekeep = (struct __timekeep *)va;
 		timekeep->major = 0;
-		timekeep->minor = 1;
+		timekeep->minor = 0;
 
 		timekeep->seq = 0;
 	}
