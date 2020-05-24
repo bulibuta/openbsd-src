@@ -21,6 +21,7 @@ int
 WRAP(gettimeofday)(struct timeval *tp, struct timezone *tzp)
 {
 	struct __timekeep *timekeep = _timekeep;
+	static struct timezone zerotz = { 0, 0 };
 	unsigned int seq;
 
 	if (timekeep == NULL)
@@ -34,7 +35,7 @@ WRAP(gettimeofday)(struct timeval *tp, struct timezone *tzp)
 	}
 
 	if (tzp)
-		return gettimeofday(tp, tzp);
+		tzp = &zerotz;
 
 	return 0;
 }
