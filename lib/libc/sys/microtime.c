@@ -23,17 +23,6 @@
 #include <time.h>
 
 /*
- * Move to MD-file
- */
-static inline uint64_t tc_get_timecount(void)
-{
-	uint32_t hi, lo;
-	asm volatile("rdtsc" : "=a"(lo), "=d"(hi));
-	return ((uint64_t)lo)|(((uint64_t)hi)<<32);
-}
-
-
-/*
  * Return the difference between the timehands' counter value now and what
  * was when we copied it to the timehands' offset_count.
  */
