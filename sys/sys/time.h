@@ -174,11 +174,6 @@ struct __timekeep {
 	uint8_t minor;		/* version minor number */
 
 	volatile unsigned int seq;	/* synchronization */
-	struct timespec tp_realtime;	/* CLOCK_REALTIME */
-	struct timespec tp_uptime;	/* CLOCK_UPTIME */
-	struct timespec tp_monotonic;	/* CLOCK_MONOTONIC */
-	struct timespec tp_boottime;	/* CLOCK_BOOTTIME */
-	struct timeval tp_microtime;	/* gettimeofday(2) */
 
 	u_int64_t		th_scale;		/* [w] */
 	u_int	 		th_offset_count;	/* [w] */

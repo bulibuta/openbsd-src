@@ -492,21 +492,6 @@ tc_update_timekeep(void)
 
 	atomic_inc_int(&timekeep->seq);
 
-	/* CLOCK_REALTIME */
-	nanotime(&timekeep->tp_realtime);
-
-	/* CLOCK_UPTIME */
-	nanoruntime(&timekeep->tp_uptime);
-
-	/* CLOCK_MONOTONIC */
-	nanouptime(&timekeep->tp_monotonic);
-
-	/* CLOCK_BOOTTIME */
-	timekeep->tp_boottime = timekeep->tp_monotonic;
-
-	/* gettimeofday(2) */
-	microtime(&timekeep->tp_microtime);
-
 	do {
 		th = timehands;
 		gen = th->th_generation;
