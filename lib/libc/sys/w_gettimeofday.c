@@ -30,7 +30,7 @@ WRAP(gettimeofday)(struct timeval *tp, struct timezone *tzp)
 	if (tp) {
 		do {
 			seq = timekeep->seq;
-			*tp = timekeep->tp_microtime;
+			_microtime(tp, _timekeep);
 		} while (seq == 0 || seq != timekeep->seq);
 	}
 

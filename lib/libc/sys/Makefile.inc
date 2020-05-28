@@ -13,7 +13,7 @@ SRCS+=	Ovfork.S brk.S ${CERROR} \
 # glue to offer userland wrappers for some syscalls
 SRCS+=	posix_madvise.c pthread_sigmask.c \
 	w_fork.c w_sigaction.c w_sigprocmask.c w_sigsuspend.c w_vfork.c \
-	w_clock_gettime.c w_gettimeofday.c
+	w_clock_gettime.c w_gettimeofday.c microtime.c
 
 # glue for compat with old syscall interfaces.
 SRCS+=	ftruncate.c lseek.c mquery.c mmap.c ptrace.c semctl.c truncate.c \

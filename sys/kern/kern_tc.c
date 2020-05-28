@@ -514,6 +514,8 @@ tc_update_timekeep(void)
 		timekeep->th_scale = th->th_scale;
 		timekeep->th_offset_count = th->th_offset_count;
 		timekeep->th_offset = th->th_offset;
+		timekeep->th_naptime = th->th_naptime;
+		timekeep->th_boottime = th->th_boottime;
 		timekeep->th_generation = th->th_generation;
 		timekeep->tc_counter_mask = th->th_counter->tc_counter_mask;
 		membar_consumer();

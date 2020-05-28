@@ -21,9 +21,6 @@
 
 #include <sys/time.h>
 
-#include "microtime.c"
-//extern void nanouptime(struct timespec *tsp, struct timekeep *tk);
-
 int
 WRAP(clock_gettime)(clockid_t clock_id, struct timespec *tp)
 {
@@ -38,26 +35,20 @@ WRAP(clock_gettime)(clockid_t clock_id, struct timespec *tp)
 	case CLOCK_REALTIME:
 		do {
 			seq = timekeep->seq;
-			*tp = timekeep->tp_realtime;
+			_nanotime(tp, timekeep);
 		} while (seq == 0 || seq != timekeep->seq);
 		break;
 	case CLOCK_UPTIME:
 		do {
 			seq = timekeep->seq;
-			*tp = timekeep->tp_uptime;
+			_nanoruntime(tp, timekeep);
 		} while (seq == 0 || seq != timekeep->seq);
 		break;
 	case CLOCK_MONOTONIC:
-		do {
-			seq = timekeep->seq;
-			*tp = timekeep->tp_monotonic;
-		} while (seq == 0 || seq != timekeep->seq);
-		break;
 	case CLOCK_BOOTTIME:
 		do {
 			seq = timekeep->seq;
-			//*tp = timekeep->tp_boottime;
-			nanouptime(tp, timekeep);
+			_nanouptime(tp, timekeep);
 		} while (seq == 0 || seq != timekeep->seq);
 		break;
 	default:

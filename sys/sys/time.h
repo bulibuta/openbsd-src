@@ -183,6 +183,8 @@ struct __timekeep {
 	u_int64_t		th_scale;		/* [w] */
 	u_int	 		th_offset_count;	/* [w] */
 	struct bintime		th_offset;		/* [w] */
+	struct bintime		th_naptime;		/* [w] */
+	struct bintime		th_boottime;		/* [tw] */
 	volatile u_int		th_generation;		/* [w] */
 	u_int 			tc_counter_mask;	/* [I] */
 };

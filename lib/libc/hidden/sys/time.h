@@ -20,6 +20,13 @@
 
 #include_next <sys/time.h>
 
+__BEGIN_HIDDEN_DECLS
+void _microtime(struct timeval *tvp, struct __timekeep *tk);
+void _nanotime(struct timespec *tsp, struct __timekeep *tk);
+void _nanoruntime(struct timespec *ts, struct __timekeep *tk);
+void _nanouptime(struct timespec *tsp, struct __timekeep *tk);
+__END_HIDDEN_DECLS
+
 PROTO_NORMAL(adjfreq);
 PROTO_NORMAL(adjtime);
 PROTO_NORMAL(futimes);
