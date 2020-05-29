@@ -94,7 +94,7 @@ struct __timekeep {
 	uint32_t major;		/* version major number */
 	uint32_t minor;		/* version minor number */
 
-	u_int64_t		th_scale;
+	uint64_t		th_scale;
 	unsigned int 		th_offset_count;
 	struct bintime		th_offset;
 	struct bintime		th_naptime;
