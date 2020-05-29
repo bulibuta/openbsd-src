@@ -64,6 +64,8 @@ struct timecounter ichpcib_timecounter = {
 	3579545,		/* frequency */
 	"ICHPM",		/* name */
 	1000			/* quality */
+	NULL,			/* private bits */
+	0			/* expose to user */
 };
 
 struct cfattach ichpcib_ca = {

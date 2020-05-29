@@ -80,6 +80,8 @@ struct timecounter {
 		 */
 	void			*tc_priv;		/* [I] */
 		/* Pointer to the timecounter's private parts. */
+	char			tc_user;		/* [I] */
+		/* Expose this timecounter to userland.  Set in softc. */
 	SLIST_ENTRY(timecounter) tc_next;		/* [I] */
 		/* Pointer to the next timecounter. */
 	int64_t			tc_freq_adj;		/* [tw] */

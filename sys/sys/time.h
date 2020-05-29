@@ -180,6 +180,7 @@ struct __timekeep {
 	struct bintime		th_boottime;
 	volatile unsigned int	th_generation;
 
+	unsigned int		tc_user;
 	unsigned int		tc_counter_mask;
 };
 

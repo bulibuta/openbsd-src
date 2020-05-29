@@ -65,7 +65,7 @@ dummy_get_timecount(struct timecounter *tc)
 }
 
 static struct timecounter dummy_timecounter = {
-	dummy_get_timecount, 0, ~0u, 1000000, "dummy", -1000000
+	dummy_get_timecount, 0, ~0u, 1000000, "dummy", -1000000, NULL, 0
 };
 
 /*
@@ -503,6 +503,7 @@ tc_update_timekeep(void)
 	timekeep->th_generation = th->th_generation;
 	if (last_tc != th->th_counter) {
 		timekeep->tc_counter_mask = th->th_counter->tc_counter_mask;
+		timekeep->tc_user = th->th_counter->tc_user;
 		last_tc = th->th_counter;
 	}
 	membar_producer();

@@ -152,8 +152,9 @@ struct timecounter ioclock_timecounter = {
 	.tc_name = "ioclock",
 	.tc_quality = 0,		/* ioclock can be overridden
 					 * by cp0 counter */
-	.tc_priv = 0			/* clock register,
+	.tc_priv = 0,			/* clock register,
 					 * determined at runtime */
+	.tc_user = 0,			/* expose to user */
 };
 
 static int

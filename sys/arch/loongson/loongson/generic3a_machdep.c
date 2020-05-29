@@ -99,6 +99,8 @@ struct timecounter rs780e_timecounter = {
 	.tc_frequency = HPET_FREQ,
 	.tc_name = "hpet",
 	.tc_quality = 100
+	.tc_priv = NULL,
+	.tc_user = 0,
 };
 
 /* Firmware entry points */

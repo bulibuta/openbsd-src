@@ -24,11 +24,10 @@
 int
 WRAP(clock_gettime)(clockid_t clock_id, struct timespec *tp)
 {
-	struct __timekeep *timekeep;
+	struct __timekeep *timekeep = _timekeep;
 
-	if (_timekeep == NULL)
+	if (timekeep == NULL || timekeep->tc_user == 0)
 		return clock_gettime(clock_id, tp);
-	timekeep = _timekeep;
 
 	switch (clock_id) {
 	case CLOCK_REALTIME:
