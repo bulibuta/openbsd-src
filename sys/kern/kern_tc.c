@@ -484,27 +484,28 @@ tc_setclock(const struct timespec *ts)
 void
 tc_update_timekeep(void)
 {
+	static struct timecounter *last_tc = NULL;
+
 	struct timehands *th;
 	u_int gen;
 
 	if (timekeep == NULL)
 		return;
 
-	atomic_inc_int(&timekeep->seq);
-
-	do {
-		th = timehands;
-		gen = th->th_generation;
-		membar_consumer();
-		timekeep->th_scale = th->th_scale;
-		timekeep->th_offset_count = th->th_offset_count;
-		timekeep->th_offset = th->th_offset;
-		timekeep->th_naptime = th->th_naptime;
-		timekeep->th_boottime = th->th_boottime;
-		timekeep->th_generation = th->th_generation;
+	th = timehands;
+	gen = th->th_generation;
+	membar_producer();
+	timekeep->th_scale = th->th_scale;
+	timekeep->th_offset_count = th->th_offset_count;
+	timekeep->th_offset = th->th_offset;
+	timekeep->th_naptime = th->th_naptime;
+	timekeep->th_boottime = th->th_boottime;
+	timekeep->th_generation = th->th_generation;
+	if (last_tc != th->th_counter) {
 		timekeep->tc_counter_mask = th->th_counter->tc_counter_mask;
-		membar_consumer();
-	} while (gen == 0 || gen != th->th_generation);
+		last_tc = th->th_counter;
+	}
+	membar_producer();
 
 	return;
 }

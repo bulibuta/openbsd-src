@@ -22,17 +22,12 @@ WRAP(gettimeofday)(struct timeval *tp, struct timezone *tzp)
 {
 	struct __timekeep *timekeep = _timekeep;
 	static struct timezone zerotz = { 0, 0 };
-	unsigned int seq;
 
 	if (timekeep == NULL)
 		return gettimeofday(tp, tzp);
 
-	if (tp) {
-		do {
-			seq = timekeep->seq;
-			_microtime(tp, timekeep);
-		} while (seq == 0 || seq != timekeep->seq);
-	}
+	if (tp)
+		_microtime(tp, timekeep);
 
 	if (tzp)
 		tzp = &zerotz;

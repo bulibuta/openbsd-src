@@ -170,18 +170,17 @@ struct bintime {
 };
 
 struct __timekeep {
-	uint8_t major;		/* version major number */
-	uint8_t minor;		/* version minor number */
+	uint32_t major;		/* version major number */
+	uint32_t minor;		/* version minor number */
 
-	volatile unsigned int seq;	/* synchronization */
+	u_int64_t		th_scale;
+	unsigned int 		th_offset_count;
+	struct bintime		th_offset;
+	struct bintime		th_naptime;
+	struct bintime		th_boottime;
+	volatile unsigned int	th_generation;
 
-	u_int64_t		th_scale;		/* [w] */
-	u_int	 		th_offset_count;	/* [w] */
-	struct bintime		th_offset;		/* [w] */
-	struct bintime		th_naptime;		/* [w] */
-	struct bintime		th_boottime;		/* [tw] */
-	volatile u_int		th_generation;		/* [w] */
-	u_int 			tc_counter_mask;	/* [I] */
+	unsigned int		tc_counter_mask;
 };
 
 #if defined(_KERNEL) || defined(_STANDALONE)

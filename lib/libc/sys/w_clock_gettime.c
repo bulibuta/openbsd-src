@@ -25,7 +25,6 @@ int
 WRAP(clock_gettime)(clockid_t clock_id, struct timespec *tp)
 {
 	struct __timekeep *timekeep;
-	unsigned int seq;
 
 	if (_timekeep == NULL)
 		return clock_gettime(clock_id, tp);
@@ -33,23 +32,14 @@ WRAP(clock_gettime)(clockid_t clock_id, struct timespec *tp)
 
 	switch (clock_id) {
 	case CLOCK_REALTIME:
-		do {
-			seq = timekeep->seq;
-			_nanotime(tp, timekeep);
-		} while (seq == 0 || seq != timekeep->seq);
+		_nanotime(tp, timekeep);
 		break;
 	case CLOCK_UPTIME:
-		do {
-			seq = timekeep->seq;
-			_nanoruntime(tp, timekeep);
-		} while (seq == 0 || seq != timekeep->seq);
+		_nanoruntime(tp, timekeep);
 		break;
 	case CLOCK_MONOTONIC:
 	case CLOCK_BOOTTIME:
-		do {
-			seq = timekeep->seq;
-			_nanouptime(tp, timekeep);
-		} while (seq == 0 || seq != timekeep->seq);
+		_nanouptime(tp, timekeep);
 		break;
 	default:
 		return clock_gettime(clock_id, tp);
