@@ -35,7 +35,6 @@
 #include <sys/queue.h>
 #include <sys/malloc.h>
 #include <dev/rndvar.h>
-#include <sys/time.h>
 
 /*
  * A large step happens on boot.  This constant detects such steps.

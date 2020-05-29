@@ -1,6 +1,6 @@
-/*	$OpenBSD$ */
+/*	$OpenBSD$	*/
 /*
- * Copyright (c) 2020 Robert Nagy <robert@openbsd.org>
+ * Copyright (c) 2020 Paul Irofti <paul@irofti.net>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -15,25 +15,18 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include <sys/types.h>
-#include <sys/time.h>
-#include <sys/timetc.h>
+#ifndef _LIBC_SYS_TIMETC_H_
+#define _LIBC_SYS_TIMETC_H_
 
-int
-WRAP(gettimeofday)(struct timeval *tp, struct timezone *tzp)
-{
-	struct __timekeep *timekeep = _timekeep;
-	static struct timezone zerotz = { 0, 0 };
+#define _LIBC
 
-	if (timekeep == NULL || timekeep->tc_user == 0)
-		return gettimeofday(tp, tzp);
+#include_next <sys/timetc.h>
 
-	if (tp)
-		_microtime(tp, timekeep);
+__BEGIN_HIDDEN_DECLS
+void _microtime(struct timeval *tvp, struct __timekeep *tk);
+void _nanotime(struct timespec *tsp, struct __timekeep *tk);
+void _nanoruntime(struct timespec *ts, struct __timekeep *tk);
+void _nanouptime(struct timespec *tsp, struct __timekeep *tk);
+__END_HIDDEN_DECLS
 
-	if (tzp)
-		tzp = &zerotz;
-
-	return 0;
-}
-DEF_WRAP(gettimeofday);
+#endif /* !_LIBC_SYS_TIMETC_H_ */

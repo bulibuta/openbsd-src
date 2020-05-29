@@ -19,6 +19,7 @@
 #include <sys/types.h>
 #include <sys/atomic.h>
 #include <sys/time.h>
+#include <sys/timetc.h>
 
 #include <time.h>
 

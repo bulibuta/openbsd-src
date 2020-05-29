@@ -24,7 +24,7 @@
 #ifndef _SYS_TIMETC_H_
 #define	_SYS_TIMETC_H_
 
-#ifndef _KERNEL
+#if !defined(_KERNEL) && !defined(_LIBC)
 #error "no user-serviceable parts inside"
 #endif
 
@@ -90,10 +90,28 @@ struct timecounter {
 		/* Precision of the counter.  Computed in tc_init(). */
 };
 
+struct __timekeep {
+	uint32_t major;		/* version major number */
+	uint32_t minor;		/* version minor number */
+
+	u_int64_t		th_scale;
+	unsigned int 		th_offset_count;
+	struct bintime		th_offset;
+	struct bintime		th_naptime;
+	struct bintime		th_boottime;
+	volatile unsigned int	th_generation;
+
+	unsigned int		tc_user;
+	unsigned int		tc_counter_mask;
+};
+
 struct rwlock;
 extern struct rwlock tc_lock;
 
 extern struct timecounter *timecounter;
+
+extern struct uvm_object *timekeep_object;
+extern struct __timekeep *timekeep;
 
 u_int64_t tc_getfrequency(void);
 u_int64_t tc_getprecision(void);

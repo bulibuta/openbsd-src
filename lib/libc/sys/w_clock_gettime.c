@@ -15,11 +15,11 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include <stdlib.h>
-#include <time.h>
-#include <err.h>
-
+#include <sys/types.h>
 #include <sys/time.h>
+#include <sys/timetc.h>
+
+#include <time.h>
 
 int
 WRAP(clock_gettime)(clockid_t clock_id, struct timespec *tp)
