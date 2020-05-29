@@ -1,4 +1,4 @@
-/* $OpenBSD: tls13_server.c,v 1.49 2020/05/19 16:35:21 jsing Exp $ */
+/* $OpenBSD: tls13_server.c,v 1.53 2020/05/23 11:58:46 jsing Exp $ */
 /*
  * Copyright (c) 2019, 2020 Joel Sing <jsing@openbsd.org>
  * Copyright (c) 2020 Bob Beck <beck@openbsd.org>
@@ -33,6 +33,9 @@ tls13_server_init(struct tls13_ctx *ctx)
 		return 0;
 	}
 	s->version = ctx->hs->max_version;
+
+	tls13_record_layer_set_retry_after_phh(ctx->rl,
+	    (s->internal->mode & SSL_MODE_AUTO_RETRY) != 0);
 
 	if (!ssl_get_new_session(s, 0)) /* XXX */
 		return 0;
@@ -321,6 +324,8 @@ tls13_server_hello_retry_request_send(struct tls13_ctx *ctx, CBB *cbb)
 {
 	int nid;
 
+	ctx->hs->hrr = 1;
+
 	if (!tls13_synthetic_handshake_message(ctx))
 		return 0;
 
@@ -362,6 +367,8 @@ tls13_client_hello_retry_recv(struct tls13_ctx *ctx, CBS *cbs)
 	/* XXX - need further checks. */
 	if (s->method->internal->version < TLS1_3_VERSION)
 		return 0;
+
+	ctx->hs->hrr = 0;
 
 	return 1;
 }
@@ -459,7 +466,12 @@ tls13_server_certificate_send(struct tls13_ctx *ctx, CBB *cbb)
 
 	for (i = 0; i < sk_X509_num(chain); i++) {
 		cert = sk_X509_value(chain, i);
-		if (!tls13_cert_add(ctx, &cert_list, cert, tlsext_server_build))
+		/*
+		 * XXX we don't send extensions with chain certs to avoid sending
+		 * a leaf ocsp stape with the chain certs.  This needs to get
+		 * fixed
+		 */
+		if (!tls13_cert_add(ctx, &cert_list, cert, NULL))
 			goto err;
 	}
 

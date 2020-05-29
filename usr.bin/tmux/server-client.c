@@ -1,4 +1,4 @@
-/* $OpenBSD: server-client.c,v 1.345 2020/05/21 07:24:13 nicm Exp $ */
+/* $OpenBSD: server-client.c,v 1.351 2020/05/26 08:41:47 nicm Exp $ */
 
 /*
  * Copyright (c) 2009 Nicholas Marriott <nicholas.marriott@gmail.com>
@@ -70,43 +70,6 @@ server_client_window_cmp(struct client_window *cw1,
 	return (0);
 }
 RB_GENERATE(client_windows, client_window, entry, server_client_window_cmp);
-
-/* Compare client offsets. */
-static int
-server_client_offset_cmp(struct client_offset *co1, struct client_offset *co2)
-{
-	if (co1->pane < co2->pane)
-		return (-1);
-	if (co1->pane > co2->pane)
-		return (1);
-	return (0);
-}
-RB_GENERATE(client_offsets, client_offset, entry, server_client_offset_cmp);
-
-/* Get pane offsets for this client. */
-struct client_offset *
-server_client_get_pane_offset(struct client *c, struct window_pane *wp)
-{
-	struct client_offset	co = { .pane = wp->id };
-
-	return (RB_FIND(client_offsets, &c->offsets, &co));
-}
-
-/* Add pane offsets for this client. */
-struct client_offset *
-server_client_add_pane_offset(struct client *c, struct window_pane *wp)
-{
-	struct client_offset	*co;
-
-	co = server_client_get_pane_offset(c, wp);
-	if (co != NULL)
-		return (co);
-	co = xcalloc(1, sizeof *co);
-	co->pane = wp->id;
-	RB_INSERT(client_offsets, &c->offsets, co);
-	memcpy(&co->offset, &wp->offset, sizeof co->offset);
-	return (co);
-}
 
 /* Number of attached clients. */
 u_int
@@ -260,14 +223,12 @@ server_client_create(int fd)
 	c->environ = environ_create();
 
 	c->fd = -1;
-	c->cwd = NULL;
+	c->out_fd = -1;
 
 	c->queue = cmdq_new();
 	RB_INIT(&c->windows);
-	RB_INIT(&c->offsets);
 	RB_INIT(&c->files);
 
-	c->tty.fd = -1;
 	c->tty.sx = 80;
 	c->tty.sy = 24;
 
@@ -325,7 +286,6 @@ server_client_lost(struct client *c)
 {
 	struct client_file	*cf, *cf1;
 	struct client_window	*cw, *cw1;
-	struct client_offset	*co, *co1;
 
 	c->flags |= CLIENT_DEAD;
 
@@ -341,18 +301,12 @@ server_client_lost(struct client *c)
 		RB_REMOVE(client_windows, &c->windows, cw);
 		free(cw);
 	}
-	RB_FOREACH_SAFE(co, client_offsets, &c->offsets, co1) {
-		RB_REMOVE(client_offsets, &c->offsets, co);
-		free(co);
-	}
 
 	TAILQ_REMOVE(&clients, c, entry);
 	log_debug("lost client %p", c);
 
-	/*
-	 * If CLIENT_TERMINAL hasn't been set, then tty_init hasn't been called
-	 * and tty_free might close an unrelated fd.
-	 */
+	if (c->flags & CLIENT_CONTROL)
+		control_stop(c);
 	if (c->flags & CLIENT_TERMINAL)
 		tty_free(&c->tty);
 	free(c->ttyname);
@@ -384,6 +338,12 @@ server_client_lost(struct client *c)
 	proc_remove_peer(c->peer);
 	c->peer = NULL;
 
+	if (c->out_fd != -1)
+		close(c->out_fd);
+	if (c->fd != -1) {
+		close(c->fd);
+		c->fd = -1;
+	}
 	server_client_unref(c);
 
 	server_add_accept(0); /* may be more file descriptors now */
@@ -1328,7 +1288,7 @@ forward_key:
 		window_pane_key(wp, c, s, wl, key, m);
 
 out:
-	if (s != NULL)
+	if (s != NULL && key != KEYC_FOCUS_OUT)
 		server_client_update_latest(c);
 	free(event);
 	return (CMD_RETURN_NORMAL);
@@ -1542,8 +1502,9 @@ server_client_check_pane_buffer(struct window_pane *wp)
 	struct evbuffer			*evb = wp->event->input;
 	size_t				 minimum;
 	struct client			*c;
-	struct client_offset		*co;
-	int				 off = !TAILQ_EMPTY(&clients);
+	struct window_pane_offset	*wpo;
+	int				 off = 1, flag;
+	u_int				 attached_clients = 0;
 
 	/*
 	 * Work out the minimum acknowledged size. This is the most that can be
@@ -1555,20 +1516,28 @@ server_client_check_pane_buffer(struct window_pane *wp)
 	TAILQ_FOREACH(c, &clients, entry) {
 		if (c->session == NULL)
 			continue;
-		if ((~c->flags & CLIENT_CONTROL) ||
-		    (c->flags & CLIENT_CONTROL_NOOUTPUT) ||
-		    (co = server_client_get_pane_offset(c, wp)) == NULL) {
+		attached_clients++;
+
+		if (~c->flags & CLIENT_CONTROL) {
 			off = 0;
 			continue;
 		}
-		if (~co->flags & CLIENT_OFFSET_OFF)
+		wpo = control_pane_offset(c, wp, &flag);
+		if (wpo == NULL) {
 			off = 0;
+			continue;
+		}
+		if (!flag)
+			off = 0;
+
 		log_debug("%s: %s has %zu bytes used, %zu bytes acknowledged "
-		    "for %%%u", __func__, c->name, co->offset.used,
-		    co->offset.acknowledged, wp->id);
-		if (co->offset.acknowledged < minimum)
-			minimum = co->offset.acknowledged;
+		    "for %%%u", __func__, c->name, wpo->used, wpo->acknowledged,
+		    wp->id);
+		if (wpo->acknowledged < minimum)
+			minimum = wpo->acknowledged;
 	}
+	if (attached_clients == 0)
+		off = 0;
 	minimum -= wp->base_offset;
 	if (minimum == 0)
 		goto out;
@@ -1593,10 +1562,10 @@ server_client_check_pane_buffer(struct window_pane *wp)
 		TAILQ_FOREACH(c, &clients, entry) {
 			if (c->session == NULL || (~c->flags & CLIENT_CONTROL))
 				continue;
-			co = server_client_get_pane_offset(c, wp);
-			if (co != NULL) {
-				co->offset.acknowledged -= wp->base_offset;
-				co->offset.used -= wp->base_offset;
+			wpo = control_pane_offset(c, wp, &flag);
+			if (wpo != NULL && !flag) {
+				wpo->acknowledged -= wp->base_offset;
+				wpo->used -= wp->base_offset;
 			}
 		}
 		wp->base_offset = minimum;
@@ -1606,10 +1575,9 @@ server_client_check_pane_buffer(struct window_pane *wp)
 out:
 	/*
 	 * If there is data remaining, and there are no clients able to consume
-	 * it, do not read any more. This is true when 1) there are attached
-	 * clients 2) all the clients are control clients 3) all of them have
-	 * either the OFF flag set, or are otherwise not able to accept any
-	 * more data for this pane.
+	 * it, do not read any more. This is true when there are attached
+	 * clients, all of which are control clients which are not able to
+	 * accept any more data.
 	 */
 	if (off)
 		bufferevent_disable(wp->event, EV_READ);
@@ -2002,6 +1970,7 @@ server_client_dispatch(struct imsg *imsg, void *arg)
 	case MSG_IDENTIFY_TTYNAME:
 	case MSG_IDENTIFY_CWD:
 	case MSG_IDENTIFY_STDIN:
+	case MSG_IDENTIFY_STDOUT:
 	case MSG_IDENTIFY_ENVIRON:
 	case MSG_IDENTIFY_CLIENTPID:
 	case MSG_IDENTIFY_DONE:
@@ -2041,7 +2010,7 @@ server_client_dispatch(struct imsg *imsg, void *arg)
 			break;
 		c->flags &= ~CLIENT_SUSPENDED;
 
-		if (c->tty.fd == -1) /* exited in the meantime */
+		if (c->fd == -1) /* exited in the meantime */
 			break;
 		s = c->session;
 
@@ -2212,6 +2181,12 @@ server_client_dispatch_identify(struct client *c, struct imsg *imsg)
 		c->fd = imsg->fd;
 		log_debug("client %p IDENTIFY_STDIN %d", c, imsg->fd);
 		break;
+	case MSG_IDENTIFY_STDOUT:
+		if (datalen != 0)
+			fatalx("bad MSG_IDENTIFY_STDOUT size");
+		c->out_fd = imsg->fd;
+		log_debug("client %p IDENTIFY_STDOUT %d", c, imsg->fd);
+		break;
 	case MSG_IDENTIFY_ENVIRON:
 		if (datalen == 0 || data[datalen - 1] != '\0')
 			fatalx("bad MSG_IDENTIFY_ENVIRON string");
@@ -2240,20 +2215,18 @@ server_client_dispatch_identify(struct client *c, struct imsg *imsg)
 	c->name = name;
 	log_debug("client %p name is %s", c, c->name);
 
-	if (c->flags & CLIENT_CONTROL) {
-		close(c->fd);
-		c->fd = -1;
-
+	 if (c->flags & CLIENT_CONTROL)
 		control_start(c);
-		c->tty.fd = -1;
-	} else if (c->fd != -1) {
-		if (tty_init(&c->tty, c, c->fd) != 0) {
+	else if (c->fd != -1) {
+		if (tty_init(&c->tty, c) != 0) {
 			close(c->fd);
 			c->fd = -1;
 		} else {
 			tty_resize(&c->tty);
 			c->flags |= CLIENT_TERMINAL;
 		}
+		close(c->out_fd);
+		c->out_fd = -1;
 	}
 
 	/*
@@ -2370,7 +2343,8 @@ void
 server_client_set_flags(struct client *c, const char *flags)
 {
 	char	*s, *copy, *next;
-	int	 flag, not;
+	uint64_t flag;
+	int	 not;
 
 	s = copy = xstrdup (flags);
 	while ((next = strsep(&s, ",")) != NULL) {
@@ -2378,15 +2352,18 @@ server_client_set_flags(struct client *c, const char *flags)
 		if (not)
 			next++;
 
-		if (strcmp(next, "no-output") == 0)
-			flag = CLIENT_CONTROL_NOOUTPUT;
-		else if (strcmp(next, "read-only") == 0)
+		flag = 0;
+		if (c->flags & CLIENT_CONTROL) {
+			if (strcmp(next, "no-output") == 0)
+				flag = CLIENT_CONTROL_NOOUTPUT;
+		}
+		if (strcmp(next, "read-only") == 0)
 			flag = CLIENT_READONLY;
 		else if (strcmp(next, "ignore-size") == 0)
 			flag = CLIENT_IGNORESIZE;
 		else if (strcmp(next, "active-pane") == 0)
 			flag = CLIENT_ACTIVEPANE;
-		else
+		if (flag == 0)
 			continue;
 
 		log_debug("client %s set flag %s", c->name, next);
@@ -2394,9 +2371,10 @@ server_client_set_flags(struct client *c, const char *flags)
 			c->flags &= ~flag;
 		else
 			c->flags |= flag;
+		if (flag == CLIENT_CONTROL_NOOUTPUT)
+			control_free_offsets(c);
 	}
 	free(copy);
-
 }
 
 /* Get client flags. This is only flags useful to show to users. */
