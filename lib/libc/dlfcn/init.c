@@ -20,6 +20,7 @@
 
 #include <sys/types.h>
 #include <sys/syscall.h>
+#include <sys/timetc.h>		/* timekeep */
 
 #ifndef PIC
 #include <sys/mman.h>
@@ -30,7 +31,6 @@
 #include <link.h>
 #include <stdlib.h>		/* atexit */
 #include <string.h>
-#include <time.h>		/* timekeep */
 #include <unistd.h>
 
 #include "init.h"

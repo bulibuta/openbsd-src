@@ -19,10 +19,17 @@
 #define _LIBC_SYS_TIMETC_H_
 
 #define _LIBC
+#include <sys/types.h>
+#include <sys/time.h>
 
 #include_next <sys/timetc.h>
 
 __BEGIN_HIDDEN_DECLS
+extern void *_timekeep;
+
+extern uint64_t (*const tc_get_timecount)(void);
+uint64_t tc_get_timecount_md(void);
+
 void _microtime(struct timeval *tvp, struct __timekeep *tk);
 void _nanotime(struct timespec *tsp, struct __timekeep *tk);
 void _nanoruntime(struct timespec *ts, struct __timekeep *tk);

@@ -18,19 +18,11 @@
 #ifndef _LIBC_TIME_H_
 #define	_LIBC_TIME_H_
 
-#include <sys/types.h>
-
 #include_next <time.h>
 
 #if 0
 extern PROTO_NORMAL(tzname);
 #endif
-
-__BEGIN_HIDDEN_DECLS
-extern void	*_timekeep;
-extern uint64_t	(*const tc_get_timecount)(void);
-uint64_t	tc_get_timecount_md(void);
-__END_HIDDEN_DECLS
 
 PROTO_NORMAL(asctime);
 PROTO_NORMAL(asctime_r);
