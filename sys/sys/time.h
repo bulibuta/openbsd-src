@@ -163,14 +163,17 @@ struct clockinfo {
 };
 #endif /* __BSD_VISIBLE */
 
+#if defined(_KERNEL) || defined(_STANDALONE) || defined (_LIBC)
+#include <sys/_time.h>
+
 /* Time expressed as seconds and fractions of a second + operations on it. */
 struct bintime {
 	time_t	sec;
 	uint64_t frac;
 };
+#endif
 
 #if defined(_KERNEL) || defined(_STANDALONE)
-#include <sys/_time.h>
 
 #define bintimecmp(btp, ctp, cmp)					\
 	((btp)->sec == (ctp)->sec ?					\

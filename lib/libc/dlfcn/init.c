@@ -46,7 +46,7 @@
 /* XXX should be in an include file shared with csu */
 char	***_csu_finish(char **_argv, char **_envp, void (*_cleanup)(void));
 
-/* provide definition for these */
+/* provide definitions for these */
 int	_pagesize = 0;
 void	*_timekeep = NULL;
 

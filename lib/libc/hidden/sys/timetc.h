@@ -30,10 +30,10 @@ extern void *_timekeep;
 extern uint64_t (*const tc_get_timecount)(void);
 uint64_t tc_get_timecount_md(void);
 
-void _microtime(struct timeval *tvp, struct __timekeep *tk);
-void _nanotime(struct timespec *tsp, struct __timekeep *tk);
-void _nanoruntime(struct timespec *ts, struct __timekeep *tk);
-void _nanouptime(struct timespec *tsp, struct __timekeep *tk);
+void _microtime(struct timeval *tvp, struct timekeep *tk);
+void _nanotime(struct timespec *tsp, struct timekeep *tk);
+void _nanoruntime(struct timespec *ts, struct timekeep *tk);
+void _nanouptime(struct timespec *tsp, struct timekeep *tk);
 __END_HIDDEN_DECLS
 
 #endif /* !_LIBC_SYS_TIMETC_H_ */

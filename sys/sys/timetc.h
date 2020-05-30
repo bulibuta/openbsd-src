@@ -80,8 +80,8 @@ struct timecounter {
 		 */
 	void			*tc_priv;		/* [I] */
 		/* Pointer to the timecounter's private parts. */
-	char			tc_user;		/* [I] */
-		/* Expose this timecounter to userland.  Set in softc. */
+	int			tc_user;		/* [I] */
+		/* Expose this timecounter to userland. */
 	SLIST_ENTRY(timecounter) tc_next;		/* [I] */
 		/* Pointer to the next timecounter. */
 	int64_t			tc_freq_adj;		/* [tw] */
@@ -90,19 +90,21 @@ struct timecounter {
 		/* Precision of the counter.  Computed in tc_init(). */
 };
 
-struct __timekeep {
-	uint32_t major;		/* version major number */
-	uint32_t minor;		/* version minor number */
+struct timekeep {
+	uint32_t tk_major;		/* version major number */
+	uint32_t tk_minor;		/* version minor number */
 
-	uint64_t		th_scale;
-	unsigned int 		th_offset_count;
-	struct bintime		th_offset;
-	struct bintime		th_naptime;
-	struct bintime		th_boottime;
-	volatile unsigned int	th_generation;
+	/* timehands members */
+	uint64_t		tk_scale;
+	u_int			tk_offset_count;
+	struct bintime		tk_offset;
+	struct bintime		tk_naptime;
+	struct bintime		tk_boottime;
+	volatile u_int		tk_generation;
 
-	unsigned int		tc_user;
-	unsigned int		tc_counter_mask;
+	/* timecounter members */
+	int			tk_user;
+	u_int			tk_counter_mask;
 };
 
 struct rwlock;
@@ -111,7 +113,7 @@ extern struct rwlock tc_lock;
 extern struct timecounter *timecounter;
 
 extern struct uvm_object *timekeep_object;
-extern struct __timekeep *timekeep;
+extern struct timekeep *timekeep;
 
 u_int64_t tc_getfrequency(void);
 u_int64_t tc_getprecision(void);

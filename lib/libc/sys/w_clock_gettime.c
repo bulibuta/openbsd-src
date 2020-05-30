@@ -22,9 +22,9 @@
 int
 WRAP(clock_gettime)(clockid_t clock_id, struct timespec *tp)
 {
-	struct __timekeep *timekeep = _timekeep;
+	struct timekeep *timekeep = _timekeep;
 
-	if (timekeep == NULL || timekeep->tc_user == 0)
+	if (timekeep == NULL || timekeep->tk_user == 0)
 		return clock_gettime(clock_id, tp);
 
 	switch (clock_id) {
