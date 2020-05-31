@@ -70,7 +70,7 @@ extern Elf_Ehdr __executable_start[] __attribute__((weak));
 
 /* provide definitions for these */
 const dl_cb *_dl_cb __relro = NULL;
-#if defined(__amd64)
+#if defined(__amd64__)
 uint64_t (*const tc_get_timecount)(void) = tc_get_timecount_md;
 #else
 uint64_t (*const tc_get_timecount)(void) = NULL;
