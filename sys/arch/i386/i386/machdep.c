@@ -1,4 +1,4 @@
-/*	$OpenBSD: machdep.c,v 1.634 2020/05/27 05:08:54 jsg Exp $	*/
+/*	$OpenBSD: machdep.c,v 1.636 2020/05/31 06:23:57 dlg Exp $	*/
 /*	$NetBSD: machdep.c,v 1.214 1996/11/10 03:16:17 thorpej Exp $	*/
 
 /*-
@@ -115,7 +115,6 @@
 #include <machine/mpbiosvar.h>
 #endif /* MULTIPROCESSOR */
 
-#include <dev/rndvar.h>
 #include <dev/isa/isareg.h>
 #include <dev/isa/isavar.h>
 #include <dev/ic/i8042reg.h>
@@ -4038,4 +4037,13 @@ void
 intr_barrier(void *ih)
 {
 	sched_barrier(NULL);
+}
+
+unsigned int
+cpu_rnd_messybits(void)
+{
+	struct timespec ts;
+
+	nanotime(&ts);
+	return (ts.tv_nsec ^ (ts.tv_sec << 20));
 }

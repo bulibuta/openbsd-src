@@ -1,4 +1,4 @@
-/* $OpenBSD: tmux.h,v 1.1057 2020/05/26 08:41:47 nicm Exp $ */
+/* $OpenBSD: tmux.h,v 1.1062 2020/06/02 20:51:46 nicm Exp $ */
 
 /*
  * Copyright (c) 2007 Nicholas Marriott <nicholas.marriott@gmail.com>
@@ -84,9 +84,6 @@ struct winlink;
 
 /* Automatic name refresh interval, in microseconds. Must be < 1 second. */
 #define NAME_INTERVAL 500000
-
-/* Maximum size of data to hold from a pane. */
-#define READ_SIZE 8192
 
 /* Default pixel cell sizes. */
 #define DEFAULT_XPIXEL 16
@@ -915,7 +912,6 @@ struct window_mode_entry {
 /* Offsets into pane buffer. */
 struct window_pane_offset {
 	size_t	used;
-	size_t	acknowledged;
 };
 
 /* Child window structure. */
@@ -1627,7 +1623,7 @@ struct client {
 #define CLIENT_DEAD 0x200
 #define CLIENT_REDRAWBORDERS 0x400
 #define CLIENT_READONLY 0x800
-#define CLIENT_DETACHING 0x1000
+/* 0x1000 unused */
 #define CLIENT_CONTROL 0x2000
 #define CLIENT_CONTROLCONTROL 0x4000
 #define CLIENT_FOCUSED 0x8000
@@ -1657,12 +1653,21 @@ struct client {
 #define CLIENT_UNATTACHEDFLAGS	\
 	(CLIENT_DEAD|		\
 	 CLIENT_SUSPENDED|	\
-	 CLIENT_DETACHING)
+	 CLIENT_EXIT)
 #define CLIENT_NOSIZEFLAGS	\
 	(CLIENT_DEAD|		\
 	 CLIENT_SUSPENDED|	\
-	 CLIENT_DETACHING)
+	 CLIENT_EXIT)
 	uint64_t	 flags;
+
+	enum {
+		CLIENT_EXIT_RETURN,
+		CLIENT_EXIT_SHUTDOWN,
+		CLIENT_EXIT_DETACH
+	}		 exit_type;
+	enum msgtype	 exit_msgtype;
+	char		*exit_session;
+
 	struct key_table *keytable;
 
 	uint64_t	 redraw_panes;
@@ -1847,6 +1852,7 @@ extern int		 ptm_fd;
 extern const char	*shell_command;
 int		 checkshell(const char *);
 void		 setblocking(int, int);
+uint64_t	 get_timer(void);
 const char	*sig2name(int);
 const char	*find_cwd(void);
 const char	*find_home(void);
@@ -1907,6 +1913,7 @@ char		*paste_make_sample(struct paste_buffer *);
 #define FORMAT_WINDOW 0x40000000U
 struct format_tree;
 struct format_modifier;
+typedef char *(*format_cb)(struct format_tree *);
 const char	*format_skip(const char *, const char *);
 int		 format_true(const char *);
 struct format_tree *format_create(struct client *, struct cmdq_item *, int,
@@ -1917,6 +1924,7 @@ void printflike(3, 4) format_add(struct format_tree *, const char *,
 		     const char *, ...);
 void		 format_add_tv(struct format_tree *, const char *,
 		     struct timeval *);
+void		 format_add_cb(struct format_tree *, const char *, format_cb);
 void		 format_each(struct format_tree *, void (*)(const char *,
 		     const char *, void *), void *);
 char		*format_expand_time(struct format_tree *, const char *);
@@ -2491,6 +2499,7 @@ void	 grid_clear_history(struct grid *);
 const struct grid_line *grid_peek_line(struct grid *, u_int);
 void	 grid_get_cell(struct grid *, u_int, u_int, struct grid_cell *);
 void	 grid_set_cell(struct grid *, u_int, u_int, const struct grid_cell *);
+void	 grid_set_padding(struct grid *, u_int, u_int);
 void	 grid_set_cells(struct grid *, u_int, u_int, const struct grid_cell *,
 	     const char *, size_t);
 struct grid_line *grid_get_line(struct grid *, u_int);
@@ -2512,6 +2521,7 @@ u_int	 grid_line_length(struct grid *, u_int);
 void	 grid_view_get_cell(struct grid *, u_int, u_int, struct grid_cell *);
 void	 grid_view_set_cell(struct grid *, u_int, u_int,
 	     const struct grid_cell *);
+void	 grid_view_set_padding(struct grid *, u_int, u_int);
 void	 grid_view_set_cells(struct grid *, u_int, u_int,
 	     const struct grid_cell *, const char *, size_t);
 void	 grid_view_clear_history(struct grid *, u_int);
@@ -2712,8 +2722,6 @@ int		 window_pane_start_input(struct window_pane *,
 void		*window_pane_get_new_data(struct window_pane *,
 		     struct window_pane_offset *, size_t *);
 void		 window_pane_update_used_data(struct window_pane *,
-		     struct window_pane_offset *, size_t, int);
-void		 window_pane_acknowledge_data(struct window_pane *,
 		     struct window_pane_offset *, size_t);
 
 /* layout.c */
@@ -2829,15 +2837,17 @@ char	*default_window_name(struct window *);
 char	*parse_window_name(const char *);
 
 /* control.c */
+void	control_flush(struct client *);
 void	control_start(struct client *);
 void	control_stop(struct client *);
 void	control_set_pane_on(struct client *, struct window_pane *);
 void	control_set_pane_off(struct client *, struct window_pane *);
 struct window_pane_offset *control_pane_offset(struct client *,
 	   struct window_pane *, int *);
-void	control_free_offsets(struct client *);
+void	control_reset_offsets(struct client *);
 void printflike(2, 3) control_write(struct client *, const char *, ...);
 void	control_write_output(struct client *, struct window_pane *);
+int	control_all_done(struct client *);
 
 /* control-notify.c */
 void	control_notify_input(struct client *, struct window_pane *,
@@ -2894,7 +2904,7 @@ u_int		 session_group_attached_count(struct session_group *);
 void		 session_renumber_windows(struct session *);
 
 /* utf8.c */
-utf8_char	 utf8_build_one(char, u_int);
+utf8_char	 utf8_build_one(u_char);
 enum utf8_state	 utf8_from_data(const struct utf8_data *, utf8_char *);
 void		 utf8_to_data(utf8_char, struct utf8_data *);
 void		 utf8_set(struct utf8_data *, u_char);

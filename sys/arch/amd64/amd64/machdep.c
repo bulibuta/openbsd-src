@@ -1,4 +1,4 @@
-/*	$OpenBSD: machdep.c,v 1.265 2020/05/28 15:06:36 yasuoka Exp $	*/
+/*	$OpenBSD: machdep.c,v 1.267 2020/06/03 06:54:04 dlg Exp $	*/
 /*	$NetBSD: machdep.c,v 1.3 2003/05/07 22:58:18 fvdl Exp $	*/
 
 /*-

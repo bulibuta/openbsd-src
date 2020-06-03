@@ -1,4 +1,4 @@
-/*	$OpenBSD: ikev2.c,v 1.227 2020/05/28 19:09:31 tobhe Exp $	*/
+/*	$OpenBSD: ikev2.c,v 1.229 2020/06/02 19:37:47 tobhe Exp $	*/
 
 /*
  * Copyright (c) 2019 Tobias Heider <tobias.heider@stusta.de>
@@ -1257,8 +1257,10 @@ ikev2_init_auth(struct iked *env, struct iked_message *msg)
 
 	if (ca_setauth(env, sa, authmsg, PROC_CERT) == -1) {
 		log_debug("%s: failed to get cert", __func__);
+		ibuf_release(authmsg);
 		return (-1);
 	}
+	ibuf_release(authmsg);
 
 	return (ikev2_init_ike_auth(env, sa));
 }
@@ -6168,16 +6170,16 @@ ikev2_cp_setaddr(struct iked *env, struct iked_sa *sa, sa_family_t family)
 	size_t			 i;
 
 	switch (family) {
-		case AF_INET:
-			if (sa->sa_addrpool)
-				return (0);
-			break;
-		case AF_INET6:
-			if (sa->sa_addrpool6)
-				return (0);
-			break;
-		default:
-			return (-1);
+	case AF_INET:
+		if (sa->sa_addrpool)
+			return (0);
+		break;
+	case AF_INET6:
+		if (sa->sa_addrpool6)
+			return (0);
+		break;
+	default:
+		return (-1);
 	}
 	if (pol->pol_ncfg == 0)
 		return (0);
