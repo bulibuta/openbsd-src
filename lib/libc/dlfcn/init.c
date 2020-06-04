@@ -71,7 +71,6 @@ extern Elf_Ehdr __executable_start[] __attribute__((weak));
 /* provide definitions for these */
 const dl_cb *_dl_cb __relro = NULL;
 
-
 void _libc_preinit(int, char **, char **, dl_cb_cb *) __dso_hidden;
 void
 _libc_preinit(int argc, char **argv, char **envp, dl_cb_cb *cb)
