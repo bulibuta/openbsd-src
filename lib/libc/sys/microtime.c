@@ -29,7 +29,7 @@
 static inline u_int
 tc_delta(struct timekeep *tk)
 {
-	return ((tc_get_timecount() - tk->tk_offset_count) &
+	return ((_tc_get_timecount(tk) - tk->tk_offset_count) &
 	    tk->tk_counter_mask);
 }
 

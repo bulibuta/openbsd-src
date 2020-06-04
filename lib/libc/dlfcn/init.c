@@ -70,11 +70,6 @@ extern Elf_Ehdr __executable_start[] __attribute__((weak));
 
 /* provide definitions for these */
 const dl_cb *_dl_cb __relro = NULL;
-#if defined(__amd64__)
-uint64_t (*const tc_get_timecount)(void) = tc_get_timecount_md;
-#else
-uint64_t (*const tc_get_timecount)(void) = NULL;
-#endif
 
 
 void _libc_preinit(int, char **, char **, dl_cb_cb *) __dso_hidden;
@@ -114,7 +109,7 @@ _libc_preinit(int argc, char **argv, char **envp, dl_cb_cb *cb)
 			break;
 #endif /* !PIC */
 		case AUX_openbsd_timekeep:
-			if (tc_get_timecount)
+			if (_tc_get_timecount)
 				_timekeep = (void *)aux->au_v;
 			break;
 		}

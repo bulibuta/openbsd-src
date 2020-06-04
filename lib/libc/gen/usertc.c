@@ -15,24 +15,10 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#ifndef _LIBC_SYS_TIMETC_H_
-#define _LIBC_SYS_TIMETC_H_
-
-#define _LIBC
 #include <sys/types.h>
-#include <sys/time.h>
+#include <sys/timetc.h>
 
-#include_next <sys/timetc.h>
-
-__BEGIN_HIDDEN_DECLS
-extern void *_timekeep;
-
-extern uint64_t (*const _tc_get_timecount)(struct timekeep *tk);
-
-void _microtime(struct timeval *tvp, struct timekeep *tk);
-void _nanotime(struct timespec *tsp, struct timekeep *tk);
-void _nanoruntime(struct timespec *ts, struct timekeep *tk);
-void _nanouptime(struct timespec *tsp, struct timekeep *tk);
-__END_HIDDEN_DECLS
-
-#endif /* !_LIBC_SYS_TIMETC_H_ */
+/*
+ * Stub. Add implementation in arch/${MACHINE_CPU}/gen/usertc.c.
+ */
+uint64_t (*const _tc_get_timecount)(struct timekeep *tk) = NULL;

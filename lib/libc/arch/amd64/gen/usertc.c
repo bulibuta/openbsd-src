@@ -16,11 +16,31 @@
  */
 
 #include <sys/types.h>
+#include <sys/timetc.h>
 
-uint64_t
-tc_get_timecount_md(void)
+static uint64_t
+rdtsc()
 {
 	uint32_t hi, lo;
 	asm volatile("rdtsc" : "=a"(lo), "=d"(hi));
 	return ((uint64_t)lo)|(((uint64_t)hi)<<32);
 }
+
+static uint64_t
+acpihpet()
+{
+	return rdtsc(); /* JUST TO COMPILE */
+}
+
+static uint64_t (*get_tc[])(void) =
+{
+	rdtsc,
+	acpihpet,
+};
+
+uint64_t
+tc_get_timecount(struct timekeep *tk)
+{
+	return (*get_tc[tk->tk_user - 1])();
+}
+uint64_t (*const _tc_get_timecount)(struct timekeep *tk) = tc_get_timecount;
