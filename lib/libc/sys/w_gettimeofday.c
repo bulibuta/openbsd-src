@@ -30,7 +30,7 @@ WRAP(gettimeofday)(struct timeval *tp, struct timezone *tzp)
 		_microtime(tp, timekeep);
 
 	if (tzp)
-		tzp = &zerotz;
+		*tzp = zerotz;
 
 	return 0;
 }
