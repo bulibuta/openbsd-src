@@ -107,6 +107,9 @@ struct boot_info *octeon_boot_info;
 void		*octeon_fdt;
 unsigned int	 octeon_ver;
 
+/* timekeep number of user accesible clocks */
+int tk_nclocks = 0;
+
 /*
  * safepri is a safe priority for sleep to set for a spin-wait
  * during autoconfiguration or after a panic.

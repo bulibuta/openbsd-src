@@ -902,6 +902,7 @@ exec_timekeep_map(struct process *pr)
 		timekeep = (struct timekeep *)va;
 		timekeep->tk_major = 0;
 		timekeep->tk_minor = 0;
+		timekeep->tk_nclocks = tk_nclocks;
 	}
 
 	uao_reference(timekeep_object);

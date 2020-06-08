@@ -91,21 +91,24 @@ struct timecounter {
 };
 
 struct timekeep {
-	uint32_t tk_major;		/* version major number */
-	uint32_t tk_minor;		/* version minor number */
+	/* set at initialization */
+	uint32_t	tk_major;		/* version major number */
+	uint32_t	tk_minor;		/* version minor number */
+	int		tk_nclocks;		/* number of arch user clocks */
 
 	/* timehands members */
-	uint64_t		tk_scale;
-	u_int			tk_offset_count;
-	struct bintime		tk_offset;
-	struct bintime		tk_naptime;
-	struct bintime		tk_boottime;
-	volatile u_int		tk_generation;
+	uint64_t	tk_scale;
+	u_int		tk_offset_count;
+	struct bintime	tk_offset;
+	struct bintime	tk_naptime;
+	struct bintime	tk_boottime;
+	volatile u_int	tk_generation;
 
 	/* timecounter members */
-	int			tk_user;
-	u_int			tk_counter_mask;
+	int		tk_user;
+	u_int		tk_counter_mask;
 };
+extern int tk_nclocks;
 
 struct rwlock;
 extern struct rwlock tc_lock;
