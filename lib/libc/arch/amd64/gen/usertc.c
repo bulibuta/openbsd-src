@@ -1,4 +1,4 @@
-/*	$OpenBSD$	*/
+/*	$OpenBSD$ */
 /*
  * Copyright (c) 2020 Paul Irofti <paul@irofti.net>
  *
@@ -18,4 +18,36 @@
 #include <sys/types.h>
 #include <sys/timetc.h>
 
-int (*const _tc_get_timecount)(struct timekeep *, uint64_t *) = NULL;
+static uint64_t
+rdtsc()
+{
+	uint32_t hi, lo;
+	asm volatile("rdtsc" : "=a"(lo), "=d"(hi));
+	return ((uint64_t)lo)|(((uint64_t)hi)<<32);
+}
+
+static uint64_t
+acpihpet()
+{
+	return rdtsc(); /* JUST TO COMPILE */
+}
+
+static uint64_t (*get_tc[])(void) =
+{
+	rdtsc,
+	acpihpet,
+};
+
+int
+tc_get_timecount(struct timekeep *tk, uint64_t *tc)
+{
+	int tk_user = tk->tk_user;
+
+	if (tc == NULL || tk_user < 1 || tk_user > tk->tk_nclocks)
+		return -1;
+
+	*tc = (*get_tc[tk_user - 1])();
+	return 0;
+}
+int (*const _tc_get_timecount)(struct timekeep *tk, uint64_t *tc)
+	= tc_get_timecount;
