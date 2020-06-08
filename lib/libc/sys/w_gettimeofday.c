@@ -20,6 +20,7 @@
 int
 WRAP(gettimeofday)(struct timeval *tp, struct timezone *tzp)
 {
+	int rc = 0;
 	struct timekeep *timekeep = _timekeep;
 	static struct timezone zerotz = { 0, 0 };
 
@@ -27,7 +28,9 @@ WRAP(gettimeofday)(struct timeval *tp, struct timezone *tzp)
 		return gettimeofday(tp, tzp);
 
 	if (tp)
-		_microtime(tp, timekeep);
+		rc = _microtime(tp, timekeep);
+	if (rc)
+		return gettimeofday(tp, tzp);
 
 	if (tzp)
 		*tzp = zerotz;

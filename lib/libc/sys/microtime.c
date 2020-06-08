@@ -26,11 +26,14 @@
  * Return the difference between the timehands' counter value now and what
  * was when we copied it to the timehands' offset_count.
  */
-static inline u_int
-tc_delta(struct timekeep *tk)
+static inline int
+tc_delta(struct timekeep *tk, u_int *delta)
 {
-	return ((_tc_get_timecount(tk) - tk->tk_offset_count) &
-	    tk->tk_counter_mask);
+	uint64_t tc;
+	if (delta == NULL || _tc_get_timecount(tk, &tc))
+		return -1;
+	*delta = (tc - tk->tk_offset_count) & tk->tk_counter_mask;
+	return 0;
 }
 
 static inline void
@@ -56,18 +59,22 @@ BINTIME_TO_TIMEVAL(const struct bintime *bt, struct timeval *tv)
 	tv->tv_usec = (long)(((uint64_t)1000000 * (uint32_t)(bt->frac >> 32)) >> 32);
 }
 
-static void
+static int
 binuptime(struct bintime *bt, struct timekeep *tk)
 {
-	u_int gen;
+	u_int gen, delta;
 
 	do {
 		gen = tk->tk_generation;
 		membar_consumer();
 		*bt = tk->tk_offset;
-		bintimeaddfrac(bt, tk->tk_scale * tc_delta(tk), bt);
+		if (tc_delta(tk, &delta))
+			return -1;
+		bintimeaddfrac(bt, tk->tk_scale * delta, bt);
 		membar_consumer();
 	} while (gen == 0 || gen != tk->tk_generation);
+
+	return 0;
 }
 
 static inline void
@@ -90,68 +97,84 @@ bintimesub(const struct bintime *bt, const struct bintime *ct,
 	dt->frac = bt->frac - ct->frac;
 }
 
-static void
+static int
 binruntime(struct bintime *bt, struct timekeep *tk)
 {
-	u_int gen;
+	u_int gen, delta;
 
 	do {
 		gen = tk->tk_generation;
 		membar_consumer();
-		bintimeaddfrac(&tk->tk_offset, tk->tk_scale * tc_delta(tk), bt);
+		if (tc_delta(tk, &delta))
+			return -1;
+		bintimeaddfrac(&tk->tk_offset, tk->tk_scale * delta, bt);
 		bintimesub(bt, &tk->tk_naptime, bt);
 		membar_consumer();
 	} while (gen == 0 || gen != tk->tk_generation);
+
+	return 0;
 }
 
-static void
+static int
 bintime(struct bintime *bt, struct timekeep *tk)
 {
-	u_int gen;
+	u_int gen, delta;
 
 	do {
 		gen = tk->tk_generation;
 		membar_consumer();
 		*bt = tk->tk_offset;
-		bintimeaddfrac(bt, tk->tk_scale * tc_delta(tk), bt);
+		if (tc_delta(tk, &delta))
+			return -1;
+		bintimeaddfrac(bt, tk->tk_scale * delta, bt);
 		bintimeadd(bt, &tk->tk_boottime, bt);
 		membar_consumer();
 	} while (gen == 0 || gen != tk->tk_generation);
+
+	return 0;
 }
 
-void
+int
 _microtime(struct timeval *tvp, struct timekeep *tk)
 {
 	struct bintime bt;
 
-	bintime(&bt, tk);
+	if (bintime(&bt, tk))
+		return -1;
 	BINTIME_TO_TIMEVAL(&bt, tvp);
+	return 0;
 }
 
-void
+int
 _nanotime(struct timespec *tsp, struct timekeep *tk)
 {
 	struct bintime bt;
 
-	bintime(&bt, tk);
+	if (bintime(&bt, tk))
+		return -1;
 	BINTIME_TO_TIMESPEC(&bt, tsp);
+	return 0;
 }
 
-void
+int
 _nanoruntime(struct timespec *ts, struct timekeep *tk)
 {
 	struct bintime bt;
 
-	binruntime(&bt, tk);
+	if (binruntime(&bt, tk))
+		return -1;
 	BINTIME_TO_TIMESPEC(&bt, ts);
+	return 0;
 }
 
 
-void
+int
 _nanouptime(struct timespec *tsp, struct timekeep *tk)
 {
 	struct bintime bt;
 
-	binuptime(&bt, tk);
+	if (binuptime(&bt, tk))
+		return -1;
 	BINTIME_TO_TIMESPEC(&bt, tsp);
+	return 0;
 }

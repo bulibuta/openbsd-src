@@ -22,6 +22,7 @@
 int
 WRAP(clock_gettime)(clockid_t clock_id, struct timespec *tp)
 {
+	int rc = 0;
 	struct timekeep *timekeep = _timekeep;
 
 	if (timekeep == NULL || timekeep->tk_user == 0)
@@ -29,18 +30,22 @@ WRAP(clock_gettime)(clockid_t clock_id, struct timespec *tp)
 
 	switch (clock_id) {
 	case CLOCK_REALTIME:
-		_nanotime(tp, timekeep);
+		rc = _nanotime(tp, timekeep);
 		break;
 	case CLOCK_UPTIME:
-		_nanoruntime(tp, timekeep);
+		rc = _nanoruntime(tp, timekeep);
 		break;
 	case CLOCK_MONOTONIC:
 	case CLOCK_BOOTTIME:
-		_nanouptime(tp, timekeep);
+		rc = _nanouptime(tp, timekeep);
 		break;
 	default:
 		return clock_gettime(clock_id, tp);
 	}
+
+	if (rc)
+		return clock_gettime(clock_id, tp);
+
 	return 0;
 }
 DEF_WRAP(clock_gettime);

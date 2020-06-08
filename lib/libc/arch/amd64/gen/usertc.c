@@ -38,9 +38,16 @@ static uint64_t (*get_tc[])(void) =
 	acpihpet,
 };
 
-uint64_t
-tc_get_timecount(struct timekeep *tk)
+int
+tc_get_timecount(struct timekeep *tk, uint64_t *tc)
 {
-	return (*get_tc[tk->tk_user - 1])();
+	int tk_user = tk->tk_user;
+
+	if (tc == NULL || tk_user < 1 || tk_user > tk->tk_nclocks)
+		return -1;
+
+	*tc = (*get_tc[tk_user - 1])();
+	return 0;
 }
-uint64_t (*const _tc_get_timecount)(struct timekeep *tk) = tc_get_timecount;
+int (*const _tc_get_timecount)(struct timekeep *tk, uint64_t *tc)
+	= tc_get_timecount;

@@ -27,12 +27,12 @@
 __BEGIN_HIDDEN_DECLS
 extern void *_timekeep;
 
-extern uint64_t (*const _tc_get_timecount)(struct timekeep *tk);
+extern int (*const _tc_get_timecount)(struct timekeep *, uint64_t *);
 
-void _microtime(struct timeval *tvp, struct timekeep *tk);
-void _nanotime(struct timespec *tsp, struct timekeep *tk);
-void _nanoruntime(struct timespec *ts, struct timekeep *tk);
-void _nanouptime(struct timespec *tsp, struct timekeep *tk);
+int _microtime(struct timeval *, struct timekeep *);
+int _nanotime(struct timespec *, struct timekeep *);
+int _nanoruntime(struct timespec *, struct timekeep *);
+int _nanouptime(struct timespec *, struct timekeep *);
 __END_HIDDEN_DECLS
 
 #endif /* !_LIBC_SYS_TIMETC_H_ */

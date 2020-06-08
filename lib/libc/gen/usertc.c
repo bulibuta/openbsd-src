@@ -21,4 +21,4 @@
 /*
  * Stub. Add implementation in arch/${MACHINE_CPU}/gen/usertc.c.
  */
-uint64_t (*const _tc_get_timecount)(struct timekeep *tk) = NULL;
+int (*const _tc_get_timecount)(struct timekeep *, uint64_t *) = NULL;
