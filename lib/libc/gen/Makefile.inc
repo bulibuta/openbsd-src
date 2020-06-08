@@ -27,10 +27,6 @@ SRCS+=  alarm.c assert.c auth_subr.c authenticate.c \
         utime.c valloc.c vis.c wait.c wait3.c waitpid.c warn.c \
         warnc.c warnx.c vwarn.c vwarnc.c vwarnx.c verr.c verrc.c verrx.c
 
-.if !exists (${LIBCSRCDIR}/arch/${MACHINE_CPU}/gen/usertc.c)
-SRCS+=  usertc.c
-.endif
-
 # machine-dependent gen sources
 # m-d Makefile.inc must include sources for:
 #	_setjmp() fabs() frexp() infinity ldexp() modf() __nan

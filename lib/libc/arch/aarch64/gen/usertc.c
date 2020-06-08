@@ -18,7 +18,4 @@
 #include <sys/types.h>
 #include <sys/timetc.h>
 
-/*
- * Stub. Add implementation in arch/${MACHINE_CPU}/gen/usertc.c.
- */
 int (*const _tc_get_timecount)(struct timekeep *, uint64_t *) = NULL;
