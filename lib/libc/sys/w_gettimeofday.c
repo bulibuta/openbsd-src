@@ -27,6 +27,9 @@ WRAP(gettimeofday)(struct timeval *tp, struct timezone *tzp)
 	if (timekeep == NULL || timekeep->tk_user == 0)
 		return gettimeofday(tp, tzp);
 
+	if (timekeep->tk_major != 1 || timekeep->tk_minor != 0)
+		return gettimeofday(tp, tzp);
+
 	if (tp)
 		rc = _microtime(tp, timekeep);
 	if (rc)

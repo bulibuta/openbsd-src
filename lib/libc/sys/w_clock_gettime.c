@@ -28,6 +28,9 @@ WRAP(clock_gettime)(clockid_t clock_id, struct timespec *tp)
 	if (timekeep == NULL || timekeep->tk_user == 0)
 		return clock_gettime(clock_id, tp);
 
+	if (timekeep->tk_major != 1 || timekeep->tk_minor != 0)
+		return clock_gettime(clock_id, tp);
+
 	switch (clock_id) {
 	case CLOCK_REALTIME:
 		rc = _nanotime(tp, timekeep);
