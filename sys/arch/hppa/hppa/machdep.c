@@ -152,7 +152,7 @@ void hpmc_dump(void);
 void cpuid(void);
 void blink_led_timeout(void *);
 
-/* timekeep number of user accesible clocks */
+/* timekeep number of user accessible clocks */
 int tk_nclocks = 0;
 
 /*

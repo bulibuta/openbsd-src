@@ -186,7 +186,7 @@ pv_addr_t kernel_pt_table[NUM_KERNEL_PTS];
 
 extern struct user *proc0paddr;
 
-/* timekeep number of user accesible clocks */
+/* timekeep number of user accessible clocks */
 int tk_nclocks = 0;
 
 /*

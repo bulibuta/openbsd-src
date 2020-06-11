@@ -235,7 +235,7 @@ int lid_action = 1;
 int pwr_action = 1;
 int forceukbd;
 
-/* timekeep number of user accesible clocks */
+/* timekeep number of user accessible clocks */
 int tk_nclocks = 0;
 
 /*

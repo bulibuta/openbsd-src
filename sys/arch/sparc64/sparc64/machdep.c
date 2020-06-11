@@ -183,7 +183,7 @@ extern int64_t cecclast;
 #define MAX_DMA_SEGS	20
 #endif
 
-/* timekeep number of user accesible clocks */
+/* timekeep number of user accessible clocks */
 int tk_nclocks = 0;
 
 /*

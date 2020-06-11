@@ -93,7 +93,7 @@ struct uvm_constraint_range *uvm_md_constraints[] = {
 vm_map_t exec_map;
 vm_map_t phys_map;
 
-/* timekeep number of user accesible clocks */
+/* timekeep number of user accessible clocks */
 int tk_nclocks = 0;
 
 /*

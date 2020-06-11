@@ -107,7 +107,7 @@ struct boot_info *octeon_boot_info;
 void		*octeon_fdt;
 unsigned int	 octeon_ver;
 
-/* timekeep number of user accesible clocks */
+/* timekeep number of user accessible clocks */
 int tk_nclocks = 0;
 
 /*

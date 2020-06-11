@@ -32,7 +32,7 @@
 #include <armv7/armv7/armv7var.h>
 #include <armv7/armv7/armv7_machdep.h>
 
-/* timekeep number of user accesible clocks */
+/* timekeep number of user accessible clocks */
 int tk_nclocks = 0;
 
 extern void omap4_smc_call(uint32_t, uint32_t);
