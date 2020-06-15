@@ -1,4 +1,4 @@
-#   $OpenBSD: tlsfuzzer.py,v 1.6 2020/06/03 04:47:03 tb Exp $
+#   $OpenBSD: tlsfuzzer.py,v 1.8 2020/06/10 22:14:37 tb Exp $
 #
 # Copyright (c) 2020 Theo Buehler <tb@openbsd.org>
 #
@@ -79,6 +79,7 @@ tls13_tests = TestGroup("TLSv1.3 tests", [
     Test("test-tls13-legacy-version.py"),
     Test("test-tls13-nociphers.py"),
     Test("test-tls13-record-padding.py"),
+    Test("test-tls13-shuffled-extentions.py"),
 
     # The skipped tests fail due to a bug in BIO_gets() which masks the retry
     # signalled from an SSL_read() failure. Testing with httpd(8) shows we're
@@ -145,7 +146,6 @@ tls13_failing_tests = TestGroup("failing TLSv1.3 tests", [
 
 tls13_slow_failing_tests = TestGroup("slow, failing TLSv1.3 tests", [
     # Other test failures bugs in keyshare/tlsext negotiation?
-    Test("test-tls13-shuffled-extentions.py"),    # should reject 2nd CH
     Test("test-tls13-unrecognised-groups.py"),    # unexpected closure
 
     # 5 failures:
@@ -289,6 +289,10 @@ tls12_failing_tests = TestGroup("failing TLSv1.2 tests", [
     Test("test-alpn-negotiation.py"),
     # many tests fail due to unexpected server_name extension
     Test("test-bleichenbacher-workaround.py"),
+
+    # timeout:
+    # 'padding of length 255 (256 with the length byte), error at position 0'
+    Test("test-lucky13.py"),
 
     # need client key and cert plus extra server setup
     Test("test-certificate-malformed.py"),
@@ -441,6 +445,8 @@ tls12_failing_tests = TestGroup("failing TLSv1.2 tests", [
 tls12_unsupported_tests = TestGroup("TLSv1.2 for unsupported features", [
     # protocol_version
     Test("test-SSLv3-padding.py"),
+    # we don't do RSA key exchanges
+    Test("test-bleichenbacher-timing.py"),
 ])
 
 # These tests take a ton of time to fail against an 1.3 server,

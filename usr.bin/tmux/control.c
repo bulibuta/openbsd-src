@@ -1,4 +1,4 @@
-/* $OpenBSD: control.c,v 1.37 2020/06/02 08:17:27 nicm Exp $ */
+/* $OpenBSD: control.c,v 1.42 2020/06/12 08:35:01 nicm Exp $ */
 
 /*
  * Copyright (c) 2012 Nicholas Marriott <nicholas.marriott@gmail.com>
@@ -65,6 +65,7 @@ struct control_pane {
 
 	int				 flags;
 #define CONTROL_PANE_OFF 0x1
+#define CONTROL_PANE_PAUSED 0x2
 
 	int				 pending_flag;
 	TAILQ_ENTRY(control_pane)	 pending_entry;
@@ -88,12 +89,15 @@ struct control_state {
 	struct bufferevent		*write_event;
 };
 
-/* Low watermark. */
+/* Low and high watermarks. */
 #define CONTROL_BUFFER_LOW 512
 #define CONTROL_BUFFER_HIGH 8192
 
 /* Minimum to write to each client. */
 #define CONTROL_WRITE_MINIMUM 32
+
+/* Maximum age for clients that are not using pause mode. */
+#define CONTROL_MAXIMUM_AGE 300000
 
 /* Flags to ignore client. */
 #define CONTROL_IGNORE_FLAGS \
@@ -153,6 +157,19 @@ control_add_pane(struct client *c, struct window_pane *wp)
 	return (cp);
 }
 
+/* Discard output for a pane. */
+static void
+control_discard_pane(struct client *c, struct control_pane *cp)
+{
+	struct control_state	*cs = c->control_state;
+	struct control_block	*cb, *cb1;
+
+	TAILQ_FOREACH_SAFE(cb, &cp->blocks, entry, cb1) {
+		TAILQ_REMOVE(&cp->blocks, cb, entry);
+		control_free_block(cs, cb);
+	}
+}
+
 /* Get actual pane for this client. */
 static struct window_pane *
 control_window_pane(struct client *c, u_int pane)
@@ -197,7 +214,7 @@ control_pane_offset(struct client *c, struct window_pane *wp, int *off)
 	}
 
 	cp = control_get_pane(c, wp);
-	if (cp == NULL) {
+	if (cp == NULL || (cp->flags & CONTROL_PANE_PAUSED)) {
 		*off = 0;
 		return (NULL);
 	}
@@ -216,7 +233,7 @@ control_set_pane_on(struct client *c, struct window_pane *wp)
 	struct control_pane	*cp;
 
 	cp = control_get_pane(c, wp);
-	if (cp != NULL) {
+	if (cp != NULL && (cp->flags & CONTROL_PANE_OFF)) {
 		cp->flags &= ~CONTROL_PANE_OFF;
 		memcpy(&cp->offset, &wp->offset, sizeof cp->offset);
 		memcpy(&cp->queued, &wp->offset, sizeof cp->queued);
@@ -231,6 +248,35 @@ control_set_pane_off(struct client *c, struct window_pane *wp)
 
 	cp = control_add_pane(c, wp);
 	cp->flags |= CONTROL_PANE_OFF;
+}
+
+/* Continue a paused pane. */
+void
+control_continue_pane(struct client *c, struct window_pane *wp)
+{
+	struct control_pane	*cp;
+
+	cp = control_get_pane(c, wp);
+	if (cp != NULL && (cp->flags & CONTROL_PANE_PAUSED)) {
+		cp->flags &= ~CONTROL_PANE_PAUSED;
+		memcpy(&cp->offset, &wp->offset, sizeof cp->offset);
+		memcpy(&cp->queued, &wp->offset, sizeof cp->queued);
+		control_write(c, "%%continue %%%u", wp->id);
+	}
+}
+
+/* Pause a pane. */
+void
+control_pause_pane(struct client *c, struct window_pane *wp)
+{
+	struct control_pane	*cp;
+
+	cp = control_add_pane(c, wp);
+	if (~cp->flags & CONTROL_PANE_PAUSED) {
+		cp->flags |= CONTROL_PANE_PAUSED;
+		control_discard_pane(c, cp);
+		control_write(c, "%%pause %%%u", wp->id);
+	}
 }
 
 /* Write a line. */
@@ -277,6 +323,41 @@ control_write(struct client *c, const char *fmt, ...)
 	va_end(ap);
 }
 
+/* Check age for this pane. */
+static int
+control_check_age(struct client *c, struct window_pane *wp,
+    struct control_pane *cp)
+{
+	struct control_block	*cb;
+	uint64_t		 t, age;
+
+	cb = TAILQ_FIRST(&cp->blocks);
+	if (cb == NULL)
+		return (0);
+	t = get_timer();
+	if (cb->t >= t)
+		return (0);
+
+	age = t - cb->t;
+	log_debug("%s: %s: %%%u is %llu behind", __func__, c->name, wp->id,
+	    (unsigned long long)age);
+
+	if (c->flags & CLIENT_CONTROL_PAUSEAFTER) {
+		if (age < c->pause_age)
+			return (0);
+		cp->flags |= CONTROL_PANE_PAUSED;
+		control_discard_pane(c, cp);
+		control_write(c, "%%pause %%%u", wp->id);
+	} else {
+		if (age < CONTROL_MAXIMUM_AGE)
+			return (0);
+		c->exit_message = xstrdup("too far behind");
+		c->flags |= CLIENT_EXIT;
+		control_discard(c);
+	}
+	return (1);
+}
+
 /* Write output from a pane. */
 void
 control_write_output(struct client *c, struct window_pane *wp)
@@ -296,8 +377,10 @@ control_write_output(struct client *c, struct window_pane *wp)
 		return;
 	}
 	cp = control_add_pane(c, wp);
-	if (cp->flags & CONTROL_PANE_OFF)
+	if (cp->flags & (CONTROL_PANE_OFF|CONTROL_PANE_PAUSED))
 		goto ignore;
+	if (control_check_age(c, wp, cp))
+		return;
 
 	window_pane_get_new_data(wp, &cp->queued, &new_size);
 	if (new_size == 0)
@@ -418,8 +501,8 @@ control_flush_all_blocks(struct client *c)
 
 /* Append data to buffer. */
 static struct evbuffer *
-control_append_data(struct control_pane *cp, struct evbuffer *message,
-    struct window_pane *wp, size_t size)
+control_append_data(struct client *c, struct control_pane *cp, uint64_t age,
+    struct evbuffer *message, struct window_pane *wp, size_t size)
 {
 	u_char	*new_data;
 	size_t	 new_size;
@@ -429,7 +512,12 @@ control_append_data(struct control_pane *cp, struct evbuffer *message,
 		message = evbuffer_new();
 		if (message == NULL)
 			fatalx("out of memory");
-		evbuffer_add_printf(message, "%%output %%%u ", wp->id);
+		if (c->flags & CLIENT_CONTROL_PAUSEAFTER) {
+			evbuffer_add_printf(message,
+			    "%%extended-output %%%u %llu : ", wp->id,
+			    (unsigned long long)age);
+		} else
+			evbuffer_add_printf(message, "%%output %%%u ", wp->id);
 	}
 
 	new_data = window_pane_get_new_data(wp, &cp->offset, &new_size);
@@ -468,6 +556,7 @@ control_write_pending(struct client *c, struct control_pane *cp, size_t limit)
 	struct evbuffer		*message = NULL;
 	size_t			 used = 0, size;
 	struct control_block	*cb, *cb1;
+	uint64_t		 age, t = get_timer();
 
 	wp = control_window_pane(c, cp->pane);
 	if (wp == NULL) {
@@ -480,16 +569,28 @@ control_write_pending(struct client *c, struct control_pane *cp, size_t limit)
 	}
 
 	while (used != limit && !TAILQ_EMPTY(&cp->blocks)) {
+		if (control_check_age(c, wp, cp)) {
+			if (message != NULL)
+				evbuffer_free(message);
+			message = NULL;
+			break;
+		}
+
 		cb = TAILQ_FIRST(&cp->blocks);
-		log_debug("%s: %s: output block %zu for %%%u (used %zu/%zu)",
-		    __func__, c->name, cb->size, cp->pane, used, limit);
+		if (cb->t < t)
+			age = t - cb->t;
+		else
+			age = 0;
+		log_debug("%s: %s: output block %zu (age %llu) for %%%u "
+		    "(used %zu/%zu)", __func__, c->name, cb->size, age,
+		    cp->pane, used, limit);
 
 		size = cb->size;
 		if (size > limit - used)
 			size = limit - used;
 		used += size;
 
-		message = control_append_data(cp, message, wp, size);
+		message = control_append_data(c, cp, age, message, wp, size);
 
 		cb->size -= size;
 		if (cb->size == 0) {
@@ -585,20 +686,15 @@ control_start(struct client *c)
 	}
 }
 
-/* Flush all output for a client that is detaching. */
+/* Discard all output for a client. */
 void
-control_flush(struct client *c)
+control_discard(struct client *c)
 {
 	struct control_state	*cs = c->control_state;
 	struct control_pane	*cp;
-	struct control_block	*cb, *cb1;
 
-	RB_FOREACH(cp, control_panes, &cs->panes) {
-		TAILQ_FOREACH_SAFE(cb, &cp->blocks, entry, cb1) {
-			TAILQ_REMOVE(&cp->blocks, cb, entry);
-			control_free_block(cs, cb);
-		}
-	}
+	RB_FOREACH(cp, control_panes, &cs->panes)
+		control_discard_pane(c, cp);
 }
 
 /* Stop control mode. */

@@ -1,4 +1,4 @@
-/* $OpenBSD: grid.c,v 1.116 2020/06/02 20:51:46 nicm Exp $ */
+/* $OpenBSD: grid.c,v 1.118 2020/06/05 09:35:41 nicm Exp $ */
 
 /*
  * Copyright (c) 2008 Nicholas Marriott <nicholas.marriott@gmail.com>
@@ -114,6 +114,7 @@ grid_extended_cell(struct grid_line *gl, struct grid_cell_entry *gce,
 {
 	struct grid_extd_entry	*gee;
 	int			 flags = (gc->flags & ~GRID_FLAG_CLEARED);
+	utf8_char		 uc;
 
 	if (~gce->flags & GRID_FLAG_EXTENDED)
 		grid_get_extended_cell(gl, gce, flags);
@@ -121,8 +122,10 @@ grid_extended_cell(struct grid_line *gl, struct grid_cell_entry *gce,
 		fatalx("offset too big");
 	gl->flags |= GRID_LINE_EXTENDED;
 
+	utf8_from_data(&gc->data, &uc);
+
 	gee = &gl->extddata[gce->offset];
-	utf8_from_data(&gc->data, &gee->data);
+	gee->data = uc;
 	gee->attr = gc->attr;
 	gee->flags = flags;
 	gee->fg = gc->fg;
@@ -649,6 +652,8 @@ grid_clear_lines(struct grid *gd, u_int py, u_int ny, u_int bg)
 		grid_free_line(gd, yy);
 		grid_empty_line(gd, yy, bg);
 	}
+	if (py != 0)
+		gd->linedata[py - 1].flags &= ~GRID_LINE_WRAPPED;
 }
 
 /* Move a group of lines. */
@@ -675,6 +680,8 @@ grid_move_lines(struct grid *gd, u_int dy, u_int py, u_int ny, u_int bg)
 			continue;
 		grid_free_line(gd, yy);
 	}
+	if (dy != 0)
+		gd->linedata[dy - 1].flags &= ~GRID_LINE_WRAPPED;
 
 	memmove(&gd->linedata[dy], &gd->linedata[py],
 	    ny * (sizeof *gd->linedata));
@@ -687,7 +694,10 @@ grid_move_lines(struct grid *gd, u_int dy, u_int py, u_int ny, u_int bg)
 		if (yy < dy || yy >= dy + ny)
 			grid_empty_line(gd, yy, bg);
 	}
+	if (py != 0 && (py < dy || py >= dy + ny))
+		gd->linedata[py - 1].flags &= ~GRID_LINE_WRAPPED;
 }
+
 
 /* Move a group of cells. */
 void
