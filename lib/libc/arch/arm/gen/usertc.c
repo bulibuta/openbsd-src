@@ -18,4 +18,4 @@
 #include <sys/types.h>
 #include <sys/timetc.h>
 
-int (*const _tc_get_timecount)(struct timekeep *, uint64_t *) = NULL;
+int (*const _tc_get_timecount)(struct timekeep *, uint *) = NULL;
