@@ -18,7 +18,7 @@
 #include <sys/types.h>
 #include <sys/timetc.h>
 
-static uint64_t
+static uint
 rdtsc()
 {
 	uint32_t hi, lo;
@@ -26,20 +26,20 @@ rdtsc()
 	return ((uint64_t)lo)|(((uint64_t)hi)<<32);
 }
 
-static uint64_t
+static uint
 acpihpet()
 {
 	return rdtsc(); /* JUST TO COMPILE */
 }
 
-static uint64_t (*const get_tc[])(void) =
+static uint (*const get_tc[])(void) =
 {
 	[TC_TSC] = rdtsc,
 	[TC_HPET] = acpihpet,
 };
 
 int
-tc_get_timecount(struct timekeep *tk, uint64_t *tc)
+tc_get_timecount(struct timekeep *tk, uint *tc)
 {
 	int tk_user = tk->tk_user;
 
@@ -49,5 +49,5 @@ tc_get_timecount(struct timekeep *tk, uint64_t *tc)
 	*tc = (*get_tc[tk_user])();
 	return 0;
 }
-int (*const _tc_get_timecount)(struct timekeep *tk, uint64_t *tc)
+int (*const _tc_get_timecount)(struct timekeep *tk, uint *tc)
 	= tc_get_timecount;

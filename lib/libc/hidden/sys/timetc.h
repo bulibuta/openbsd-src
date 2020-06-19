@@ -27,7 +27,7 @@
 __BEGIN_HIDDEN_DECLS
 extern struct timekeep *_timekeep;
 
-extern int (*const _tc_get_timecount)(struct timekeep *, uint64_t *);
+extern int (*const _tc_get_timecount)(struct timekeep *, uint *);
 
 int _microtime(struct timeval *, struct timekeep *);
 int _nanotime(struct timespec *, struct timekeep *);
