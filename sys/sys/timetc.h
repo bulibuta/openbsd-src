@@ -28,6 +28,7 @@
 #error "no user-serviceable parts inside"
 #endif
 
+#include <machine/timetc.h>
 #include <sys/queue.h>
 
 /*-
