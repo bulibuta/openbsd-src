@@ -244,6 +244,7 @@ tsc_timecounter_init(struct cpu_info *ci, uint64_t cpufreq)
 		printf("ERROR: %lld cycle TSC drift observed\n",
 		    (long long)tsc_drift_observed);
 		tsc_timecounter.tc_quality = -1000;
+		tsc_timecounter.tc_user = 0;
 		tsc_is_invariant = 0;
 	}
 
