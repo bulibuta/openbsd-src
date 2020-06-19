@@ -19,7 +19,6 @@
 #define _MACHINE_TIMETC_H_
 
 #define	TC_TSC	1
-#define	TC_HPET	2
-#define	TC_LAST	3
+#define	TC_LAST	2
 
 #endif	/* _MACHINE_TIMETC_H_ */

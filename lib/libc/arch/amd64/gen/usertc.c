@@ -18,35 +18,23 @@
 #include <sys/types.h>
 #include <sys/timetc.h>
 
-static uint
-rdtsc()
+static inline uint
+rdtsc(void)
 {
 	uint32_t hi, lo;
 	asm volatile("rdtsc" : "=a"(lo), "=d"(hi));
 	return ((uint64_t)lo)|(((uint64_t)hi)<<32);
 }
 
-static uint
-acpihpet()
-{
-	return rdtsc(); /* JUST TO COMPILE */
-}
-
-static uint (*const get_tc[])(void) =
-{
-	[TC_TSC] = rdtsc,
-	[TC_HPET] = acpihpet,
-};
-
 int
 tc_get_timecount(struct timekeep *tk, uint *tc)
 {
 	int tk_user = tk->tk_user;
 
-	if (tc == NULL || tk_user < 1 || tk_user > TC_LAST)
+	if (tc == NULL || tk_user < 1 || tk_user >= TC_LAST)
 		return -1;
 
-	*tc = (*get_tc[tk_user])();
+	*tc = rdtsc();
 	return 0;
 }
 int (*const _tc_get_timecount)(struct timekeep *tk, uint *tc)
