@@ -27,15 +27,15 @@ rdtsc(void)
 }
 
 int
-tc_get_timecount(struct timekeep *tk, uint *tc)
+tc_get_timecount(struct timekeep *tk, u_int *tc)
 {
 	int tk_user = tk->tk_user;
 
-	if (tc == NULL || tk_user < 1 || tk_user >= TC_LAST)
+	if (tk_user < 1 || tk_user >= TC_LAST)
 		return -1;
 
 	*tc = rdtsc();
 	return 0;
 }
-int (*const _tc_get_timecount)(struct timekeep *tk, uint *tc)
+int (*const _tc_get_timecount)(struct timekeep *tk, u_int *tc)
 	= tc_get_timecount;

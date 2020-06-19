@@ -883,8 +883,8 @@ exec_timekeep_map(struct process *pr)
 	size_t timekeep_sz = sizeof(struct timekeep);
 
 	/*
-	 * Similar to the sigcode object, except that there is a single timekeep
-	 * object, and not one per emulation.
+	 * Similar to the sigcode object, except that there is a single
+	 * timekeep object, and not one per emulation.
 	 */
 	if (timekeep_object == NULL) {
 		vaddr_t va;

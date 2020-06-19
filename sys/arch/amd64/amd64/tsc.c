@@ -42,7 +42,7 @@ int64_t	tsc_drift_observed;
 volatile int64_t	tsc_sync_val;
 volatile struct cpu_info	*tsc_sync_cpu;
 
-uint		tsc_get_timecount(struct timecounter *tc);
+u_int		tsc_get_timecount(struct timecounter *tc);
 
 #include "lapic.h"
 #if NLAPIC > 0
