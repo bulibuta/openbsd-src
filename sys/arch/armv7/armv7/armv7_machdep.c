@@ -186,9 +186,6 @@ pv_addr_t kernel_pt_table[NUM_KERNEL_PTS];
 
 extern struct user *proc0paddr;
 
-/* timekeep number of user accessible clocks */
-int tk_nclocks = 0;
-
 /*
  * safepri is a safe priority for sleep to set for a spin-wait
  * during autoconfiguration or after a panic.
