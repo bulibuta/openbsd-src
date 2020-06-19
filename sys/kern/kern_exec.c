@@ -900,9 +900,7 @@ exec_timekeep_map(struct process *pr)
 		}
 
 		timekeep = (struct timekeep *)va;
-		timekeep->tk_major = 1;
-		timekeep->tk_minor = 0;
-		timekeep->tk_nclocks = tk_nclocks;
+		timekeep->tk_version = TK_VERSION;
 	}
 
 	uao_reference(timekeep_object);

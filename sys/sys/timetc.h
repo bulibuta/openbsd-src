@@ -93,9 +93,7 @@ struct timecounter {
 
 struct timekeep {
 	/* set at initialization */
-	uint32_t	tk_major;		/* version major number */
-	uint32_t	tk_minor;		/* version minor number */
-	int		tk_nclocks;		/* number of arch user clocks */
+	uint32_t	tk_version;		/* version number */
 
 	/* timehands members */
 	uint64_t	tk_scale;
@@ -109,7 +107,7 @@ struct timekeep {
 	int		tk_user;
 	u_int		tk_counter_mask;
 };
-extern int tk_nclocks;
+#define TK_VERSION	0
 
 struct rwlock;
 extern struct rwlock tc_lock;
