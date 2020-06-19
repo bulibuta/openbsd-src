@@ -50,7 +50,7 @@ extern u_int32_t lapic_per_second;
 #endif
 
 struct timecounter tsc_timecounter = {
-	tsc_get_timecount, NULL, ~0u, 0, "tsc", -1000, NULL, 1
+	tsc_get_timecount, NULL, ~0u, 0, "tsc", -1000, NULL, TC_TSC
 };
 
 uint64_t
