@@ -25,7 +25,7 @@
 #include_next <sys/timetc.h>
 
 __BEGIN_HIDDEN_DECLS
-extern void *_timekeep;
+extern struct timekeep *_timekeep;
 
 extern int (*const _tc_get_timecount)(struct timekeep *, uint64_t *);
 

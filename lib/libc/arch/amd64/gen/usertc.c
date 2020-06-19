@@ -32,10 +32,10 @@ acpihpet()
 	return rdtsc(); /* JUST TO COMPILE */
 }
 
-static uint64_t (*get_tc[])(void) =
+static uint64_t (*const get_tc[])(void) =
 {
-	rdtsc,
-	acpihpet,
+	[TC_TSC] = rdtsc,
+	[TC_HPET] = acpihpet,
 };
 
 int
@@ -43,10 +43,10 @@ tc_get_timecount(struct timekeep *tk, uint64_t *tc)
 {
 	int tk_user = tk->tk_user;
 
-	if (tc == NULL || tk_user < 1 || tk_user > tk->tk_nclocks)
+	if (tc == NULL || tk_user < 1 || tk_user > TC_LAST)
 		return -1;
 
-	*tc = (*get_tc[tk_user - 1])();
+	*tc = (*get_tc[tk_user])();
 	return 0;
 }
 int (*const _tc_get_timecount)(struct timekeep *tk, uint64_t *tc)
