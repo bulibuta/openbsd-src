@@ -48,7 +48,7 @@ char	***_csu_finish(char **_argv, char **_envp, void (*_cleanup)(void));
 
 /* provide definitions for these */
 int	_pagesize = 0;
-struct timekeep	*_timekeep = NULL;
+struct timekeep	*_timekeep;
 
 /*
  * In dynamicly linked binaries environ and __progname are overriden by
@@ -110,7 +110,8 @@ _libc_preinit(int argc, char **argv, char **envp, dl_cb_cb *cb)
 		case AUX_openbsd_timekeep:
 			if (_tc_get_timecount) {
 				_timekeep = (void *)aux->au_v;
-				if (_timekeep->tk_version != TK_VERSION)
+				if (_timekeep &&
+				    _timekeep->tk_version != TK_VERSION)
 					_timekeep = NULL;
 			}
 			break;
