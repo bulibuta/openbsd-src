@@ -37,6 +37,7 @@ uint64_t	tsc_frequency;
 int		tsc_is_invariant;
 
 #define	TSC_DRIFT_MAX			250
+#define TSC_SKEW_MAX			1000
 int64_t	tsc_drift_observed;
 
 volatile int64_t	tsc_sync_val;
@@ -216,6 +217,8 @@ tsc_get_timecount(struct timecounter *tc)
 void
 tsc_timecounter_init(struct cpu_info *ci, uint64_t cpufreq)
 {
+	CPU_INFO_ITERATOR cii;
+
 #ifdef TSC_DEBUG
 	printf("%s: TSC skew=%lld observed drift=%lld\n", __func__,
 	    (long long)ci->ci_tsc_skew, (long long)tsc_drift_observed);
@@ -246,6 +249,12 @@ tsc_timecounter_init(struct cpu_info *ci, uint64_t cpufreq)
 		tsc_timecounter.tc_quality = -1000;
 		tsc_timecounter.tc_user = 0;
 		tsc_is_invariant = 0;
+	}
+	CPU_INFO_FOREACH(cii, ci) {
+		if (ci->ci_tsc_skew > TSC_SKEW_MAX) {
+			tsc_timecounter.tc_user = 0;
+			break;
+		}
 	}
 
 	tc_init(&tsc_timecounter);
