@@ -29,35 +29,12 @@
 static inline int
 tc_delta(struct timekeep *tk, u_int *delta)
 {
-	uint tc;
+	u_int tc;
 
 	if (_tc_get_timecount(tk, &tc))
 		return -1;
 	*delta = (tc - tk->tk_offset_count) & tk->tk_counter_mask;
 	return 0;
-}
-
-static inline void
-bintimeaddfrac(const struct bintime *bt, uint64_t x, struct bintime *ct)
-{
-	ct->sec = bt->sec;
-	if (bt->frac > bt->frac + x)
-		ct->sec++;
-	ct->frac = bt->frac + x;
-}
-
-static inline void
-BINTIME_TO_TIMESPEC(const struct bintime *bt, struct timespec *ts)
-{
-	ts->tv_sec = bt->sec;
-	ts->tv_nsec = (long)(((uint64_t)1000000000 * (uint32_t)(bt->frac >> 32)) >> 32);
-}
-
-static inline void
-BINTIME_TO_TIMEVAL(const struct bintime *bt, struct timeval *tv)
-{
-	tv->tv_sec = bt->sec;
-	tv->tv_usec = (long)(((uint64_t)1000000 * (uint32_t)(bt->frac >> 32)) >> 32);
 }
 
 static int
@@ -76,26 +53,6 @@ binuptime(struct bintime *bt, struct timekeep *tk)
 	} while (gen == 0 || gen != tk->tk_generation);
 
 	return 0;
-}
-
-static inline void
-bintimeadd(const struct bintime *bt, const struct bintime *ct,
-    struct bintime *dt)
-{
-	dt->sec = bt->sec + ct->sec;
-	if (bt->frac > bt->frac + ct->frac)
-		dt->sec++;
-	dt->frac = bt->frac + ct->frac;
-}
-
-static inline void
-bintimesub(const struct bintime *bt, const struct bintime *ct,
-    struct bintime *dt)
-{
-	dt->sec = bt->sec - ct->sec;
-	if (bt->frac < bt->frac - ct->frac)
-		dt->sec--;
-	dt->frac = bt->frac - ct->frac;
 }
 
 static int

@@ -173,7 +173,7 @@ struct bintime {
 };
 #endif
 
-#if defined(_KERNEL) || defined(_STANDALONE)
+#if defined(_KERNEL) || defined(_STANDALONE) || defined (_LIBC)
 
 #define bintimecmp(btp, ctp, cmp)					\
 	((btp)->sec == (ctp)->sec ?					\
@@ -252,6 +252,9 @@ TIMEVAL_TO_BINTIME(const struct timeval *tv, struct bintime *bt)
 	/* 18446744073709 = int(2^64 / 1000000) */
 	bt->frac = (uint64_t)tv->tv_usec * (uint64_t)18446744073709ULL;
 }
+#endif
+
+#if defined(_KERNEL) || defined(_STANDALONE)
 
 extern volatile time_t time_second;	/* Seconds since epoch, wall time. */
 extern volatile time_t time_uptime;	/* Seconds since reboot. */
