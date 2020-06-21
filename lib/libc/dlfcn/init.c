@@ -48,7 +48,7 @@ char	***_csu_finish(char **_argv, char **_envp, void (*_cleanup)(void));
 
 /* provide definitions for these */
 int	_pagesize = 0;
-struct timekeep	*_timekeep;
+struct timekeep	*_timekeep = NULL;
 
 /*
  * In dynamicly linked binaries environ and __progname are overriden by
