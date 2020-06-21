@@ -251,7 +251,8 @@ tsc_timecounter_init(struct cpu_info *ci, uint64_t cpufreq)
 		tsc_is_invariant = 0;
 	}
 	CPU_INFO_FOREACH(cii, ci) {
-		if (ci->ci_tsc_skew > TSC_SKEW_MAX) {
+		if (ci->ci_tsc_skew < -TSC_SKEW_MAX ||
+		    ci->ci_tsc_skew > TSC_SKEW_MAX) {
 			tsc_timecounter.tc_user = 0;
 			break;
 		}
