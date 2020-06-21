@@ -18,7 +18,7 @@
 #include <sys/types.h>
 #include <sys/timetc.h>
 
-static inline uint
+static inline u_int
 rdtsc(void)
 {
 	uint32_t hi, lo;
