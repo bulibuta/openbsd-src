@@ -887,7 +887,7 @@ exec_timekeep_map(struct process *pr)
 	 * timekeep object, and not one per emulation.
 	 */
 	if (timekeep_object == NULL) {
-		vaddr_t va;
+		vaddr_t va = 0;
 
 		timekeep_object = uao_create(timekeep_sz, 0);
 		uao_reference(timekeep_object);
