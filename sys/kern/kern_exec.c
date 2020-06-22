@@ -680,6 +680,10 @@ sys_execve(struct proc *p, void *v, register_t *retval)
 	 */
 	KNOTE(&pr->ps_klist, NOTE_EXEC);
 
+	/* map the process's timekeep page, needs to be before e_fixup */
+	if (exec_timekeep_map(pr))
+		goto free_pack_abort;
+
 	/* setup new registers and do misc. setup. */
 	if (pack.ep_emul->e_fixup != NULL) {
 		if ((*pack.ep_emul->e_fixup)(p, &pack) != 0)
@@ -693,9 +697,6 @@ sys_execve(struct proc *p, void *v, register_t *retval)
 
 	/* map the process's signal trampoline code */
 	if (exec_sigcode_map(pr, pack.ep_emul))
-		goto free_pack_abort;
-	/* map the process's timekeep page */
-	if (exec_timekeep_map(pr))
 		goto free_pack_abort;
 
 #ifdef __HAVE_EXEC_MD_MAP
