@@ -214,7 +214,8 @@ uvm_should_coredump(struct proc *p, struct vm_map_entry *entry)
 {
 	if (!(entry->protection & PROT_WRITE) &&
 	    entry->aref.ar_amap == NULL &&
-	    entry->start != p->p_p->ps_sigcode)
+	    entry->start != p->p_p->ps_sigcode &&
+	    entry->start != p->p_p->ps_timekeep)
 		return 0;
 
 	/*
