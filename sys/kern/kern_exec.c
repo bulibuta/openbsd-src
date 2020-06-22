@@ -904,6 +904,7 @@ exec_timekeep_map(struct process *pr)
 		timekeep->tk_version = TK_VERSION;
 	}
 
+	pr->ps_timekeep = 0; /* no hint */
 	uao_reference(timekeep_object);
 	if (uvm_map(&pr->ps_vmspace->vm_map, &pr->ps_timekeep, round_page(timekeep_sz),
 	    timekeep_object, 0, 0, UVM_MAPFLAG(PROT_READ, PROT_READ,
