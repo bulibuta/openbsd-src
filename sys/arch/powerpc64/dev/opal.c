@@ -1,4 +1,4 @@
-/*	$OpenBSD: opal.c,v 1.2 2020/06/14 17:56:54 kettenis Exp $	*/
+/*	$OpenBSD: opal.c,v 1.4 2020/06/22 21:13:40 kettenis Exp $	*/
 /*
  * Copyright (c) 2020 Mark Kettenis <kettenis@openbsd.org>
  *
@@ -44,6 +44,7 @@ struct cfdriver opal_cd = {
 	NULL, "opal", DV_DULL
 };
 
+void	opal_attach_node(struct opal_softc *, int);
 int	opal_gettime(struct todr_chip_handle *, struct timeval *);
 int	opal_settime(struct todr_chip_handle *, struct timeval *);
 
@@ -77,6 +78,52 @@ opal_attach(struct device *parent, struct device *self, void *aux)
 	sc->sc_todr.todr_gettime = opal_gettime;
 	sc->sc_todr.todr_settime = opal_settime;
 	todr_attach(&sc->sc_todr);
+
+	node = OF_getnodebyname(faa->fa_node, "consoles");
+	if (node) {
+		for (node = OF_child(node); node; node = OF_peer(node))
+			opal_attach_node(sc, node);
+	}
+}
+
+int
+opal_print(void *aux, const char *pnp)
+{
+	struct fdt_attach_args *faa = aux;
+	char name[32];
+
+	if (!pnp)
+		return (QUIET);
+
+	if (OF_getprop(faa->fa_node, "name", name, sizeof(name)) > 0) {
+		name[sizeof(name) - 1] = 0;
+		printf("\"%s\"", name);
+	} else
+		printf("node %u", faa->fa_node);
+
+	printf(" at %s", pnp);
+
+	return (UNCONF);
+}
+
+void
+opal_attach_node(struct opal_softc *sc, int node)
+{
+	struct fdt_attach_args faa;
+	char buf[32];
+
+	if (OF_getproplen(node, "compatible") <= 0)
+		return;
+
+	if (OF_getprop(node, "status", buf, sizeof(buf)) > 0 &&
+	    strcmp(buf, "disabled") == 0)
+		return;
+
+	memset(&faa, 0, sizeof(faa));
+	faa.fa_name = "";
+	faa.fa_node = node;
+
+	config_found(&sc->sc_dev, &faa, opal_print);
 }
 
 int
@@ -102,7 +149,7 @@ opal_gettime(struct todr_chip_handle *ch, struct timeval *tv)
 	dt.dt_day = FROMBCD((date >> 0) & 0xff);
 	dt.dt_mon = FROMBCD((date >> 8) & 0xff);
 	dt.dt_year = FROMBCD((date >> 16) & 0xff);
-	dt.dt_year |= 100 * FROMBCD((date >> 24) & 0xff);
+	dt.dt_year += 100 * FROMBCD((date >> 24) & 0xff);
 
 	tv->tv_sec = clock_ymdhms_to_secs(&dt);
 	tv->tv_usec = 0;

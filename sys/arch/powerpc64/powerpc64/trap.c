@@ -1,4 +1,4 @@
-/*	$OpenBSD: trap.c,v 1.8 2020/06/18 22:51:38 kettenis Exp $	*/
+/*	$OpenBSD: trap.c,v 1.13 2020/06/22 18:15:50 kettenis Exp $	*/
 
 /*
  * Copyright (c) 2020 Mark Kettenis <kettenis@openbsd.org>
@@ -31,7 +31,8 @@
 #include <machine/trap.h>
 
 void	decr_intr(struct trapframe *); /* clock.c */
-void	hvi_intr(struct trapframe *);
+void	hvi_intr(struct trapframe *);  /* intr.c */
+void	syscall(struct trapframe *);   /* syscall.c */
 
 void
 trap(struct trapframe *frame)
@@ -39,6 +40,12 @@ trap(struct trapframe *frame)
 	struct cpu_info *ci = curcpu();
 	struct proc *p = curproc;
 	int type = frame->exc;
+	struct vm_map *map;
+	struct slb_desc *slbd;
+	pmap_t pm;
+	vaddr_t va;
+	int ftype;
+	int error;
 
 	switch (type) {
 	case EXC_DECR:
@@ -49,8 +56,12 @@ trap(struct trapframe *frame)
 		return;
 	}
 
+	if (frame->srr1 & PSL_EE)
+		intr_enable();
+
 	if (frame->srr1 & PSL_PR) {
 		type |= EXC_USER;
+		p->p_md.md_regs = frame;
 		refreshcreds(p);
 	}
 
@@ -70,14 +81,92 @@ trap(struct trapframe *frame)
 		db_ktrap(T_BREAKPOINT, frame); /* single-stepping */
 		return;
 #endif
+
+	case EXC_DSI:
+		map = kernel_map;
+		va = frame->dar;
+		if (curpcb->pcb_onfault && va < VM_MAXUSER_ADDRESS) {
+			map = &p->p_vmspace->vm_map;
+		}
+		if (frame->dsisr & DSISR_STORE)
+			ftype = PROT_READ | PROT_WRITE;
+		else
+			ftype = PROT_READ;
+		KERNEL_LOCK();
+		if (uvm_fault(map, trunc_page(va), 0, ftype) == 0) {
+			KERNEL_UNLOCK();
+			return;
+		}
+		KERNEL_UNLOCK();
+
+		if (curpcb->pcb_onfault)
+			printf("DSI onfault\n");
+
+		printf("dar 0x%lx dsisr 0x%lx\n", frame->dar, frame->dsisr);
+		goto fatal;
+
+	case EXC_DSE:
+		if (curpcb->pcb_onfault)
+			printf("DSE onfault\n");
+
+		printf("dar 0x%lx dsisr 0x%lx\n", frame->dar, frame->dsisr);
+		goto fatal;
+
+	case EXC_DSE|EXC_USER:
+		pm = p->p_vmspace->vm_map.pmap;
+		slbd = pmap_slbd_lookup(pm, frame->dar);
+		if (slbd) {
+			pmap_slbd_cache(pm, slbd);
+			break;
+		}
+		/* FALLTHROUGH */
+
+	case EXC_DSI|EXC_USER:
+		map = &p->p_vmspace->vm_map;
+		va = frame->dar;
+		if (frame->dsisr & DSISR_STORE)
+			ftype = PROT_READ | PROT_WRITE;
+		else
+			ftype = PROT_READ;
+		KERNEL_LOCK();
+		error = uvm_fault(map, trunc_page(va), 0, ftype);
+		KERNEL_UNLOCK();
+		if (error)
+			goto fatal;
+		break;
+
+	case EXC_ISE|EXC_USER:
+		pm = p->p_vmspace->vm_map.pmap;
+		slbd = pmap_slbd_lookup(pm, frame->srr0);
+		if (slbd) {
+			pmap_slbd_cache(pm, slbd);
+			break;
+		}
+		/* FALLTHROUGH */
+
+	case EXC_ISI|EXC_USER:
+		map = &p->p_vmspace->vm_map;
+		va = frame->srr0;
+		ftype = PROT_READ | PROT_EXEC;
+		KERNEL_LOCK();
+		error = uvm_fault(map, trunc_page(va), 0, ftype);
+		KERNEL_UNLOCK();
+		if (error)
+			goto fatal;
+		break;
+
+	case EXC_SC|EXC_USER:
+		syscall(frame);
+		return;
+
 	case EXC_AST|EXC_USER:
 		p->p_md.md_astpending = 0;
-		intr_enable();
 		uvmexp.softs++;
 		mi_ast(p, ci->ci_want_resched);
 		break;
 
 	default:
+	fatal:
 		panic("trap type %lx srr1 %lx at %lx lr %lx",
 		    frame->exc, frame->srr1, frame->srr0, frame->lr);
 	}

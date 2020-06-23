@@ -1,4 +1,4 @@
-/*	$OpenBSD: locore.S,v 1.13 2020/06/14 17:56:54 kettenis Exp $	*/
+/*	$OpenBSD: locore.S,v 1.18 2020/06/22 18:49:36 kettenis Exp $	*/
 
 /*
  * Copyright (c) 2020 Mark Kettenis <kettenis@openbsd.org>
@@ -89,7 +89,11 @@ cpu_switchto:
 	std	%r4, CI_CURPROC(%r13)
 
 	ld	%r31, P_ADDR(%r4)
+	std	%r31, CI_CURPCB(%r13)
 	ld	%r1, PCB_SP(%r31)
+
+	ld	%r31, P_MD_USER_SLB_PA(%r4)
+	std	%r31, CI_USER_SLB_PA(%r13)
 
 	ld	%r31, SF_R31(%r1)
 	ld	%r30, SF_R30(%r1)

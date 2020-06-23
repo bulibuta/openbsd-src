@@ -1,4 +1,4 @@
-#	$OpenBSD: Makefile,v 1.779 2020/06/18 19:30:53 kettenis Exp $
+#	$OpenBSD: Makefile,v 1.781 2020/06/21 12:25:47 dlg Exp $
 
 MAN=	aac.4 abcrtc.4 ac97.4 acphy.4 acrtc.4 \
 	acpi.4 acpiac.4 acpials.4 acpiasus.4 acpibat.4 \
@@ -20,7 +20,7 @@ MAN=	aac.4 abcrtc.4 ac97.4 acphy.4 acrtc.4 \
 	axe.4 axen.4 axppmic.4 azalia.4 \
 	bce.4 bcmaux.4 bcmbsc.4 bcmclock.4 bcmdmac.4 bcmdog.4 bcmgpio.4 \
 	bcmirng.4 bcmmbox.4 bcmpcie.4 bcmrng.4 bcmsdhost.4 bcmtemp.4 \
-	bdpmic.4 \
+	bcmtmon.4 bdpmic.4 \
 	berkwdt.4 bge.4 bgw.4 bio.4 bpe.4 bktr.4 bmtphy.4 bnx.4 bnxt.4 \
 	boca.4 bpf.4 brgphy.4 bridge.4 brswphy.4 bse.4 bwfm.4 bwi.4 bytgpio.4 \
 	cac.4 cas.4 cardbus.4 carp.4 ccp.4 ccpmic.4 cd.4 cdce.4 cfxga.4 \
@@ -96,7 +96,8 @@ MAN=	aac.4 abcrtc.4 ac97.4 acphy.4 acrtc.4 \
 	vmmci.4 vmt.4 vmwpvs.4 vmx.4 vnd.4 vr.4 \
 	vscsi.4 vte.4 vxlan.4 \
 	watchdog.4 wb.4 wbenv.4 wbng.4 wbsd.4 wbsio.4 wd.4 wdc.4 wdsc.4 we.4 \
-	wi.4 witness.4 wpi.4 wscons.4 wsdisplay.4 wskbd.4 wsmouse.4 wsmux.4 \
+	wg.4 wi.4 witness.4 wpi.4 wscons.4 wsdisplay.4 wskbd.4 wsmouse.4 \
+	wsmux.4 \
 	xbf.4 xe.4 xen.4 xf86.4 xge.4 xhci.4 xl.4 xmphy.4 xnf.4 xspd.4 \
 	yds.4 zero.4 zyd.4
 
