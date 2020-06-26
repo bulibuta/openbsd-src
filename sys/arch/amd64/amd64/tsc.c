@@ -37,7 +37,7 @@ uint64_t	tsc_frequency;
 int		tsc_is_invariant;
 
 #define	TSC_DRIFT_MAX			250
-#define TSC_SKEW_MAX			1000
+#define TSC_SKEW_MAX			100
 int64_t	tsc_drift_observed;
 
 volatile int64_t	tsc_sync_val;
