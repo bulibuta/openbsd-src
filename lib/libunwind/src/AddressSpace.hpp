@@ -18,6 +18,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/tree.h>
+#include <sys/queue.h>
 
 #ifndef _LIBUNWIND_USE_DLADDR
   #if !defined(_LIBUNWIND_IS_BAREMETAL) && !defined(_WIN32)
@@ -192,6 +193,7 @@ public:
     uintptr_t m_pc;
 
     RB_ENTRY(CacheItem) entry;
+    TAILQ_ENTRY(CacheItem) list_entry;
   };
 
   typedef uintptr_t CacheItemKey;
@@ -202,6 +204,7 @@ public:
 
   UnwindInfoSectionsCache() {
     m_head = RB_INITIALIZER(&head);
+    m_list_head = TAILQ_HEAD_INITIALIZER(m_list_head);
   }
 
   bool getUnwindInfoSectionsForPC(CacheItemKey key, UnwindInfoSections &uis) {
@@ -210,9 +213,21 @@ public:
       result = &m_prev_req_item->m_uis;
     else {
       struct CacheItem find(key), *res;
+      int list_length = 0;
+      TAILQ_FOREACH_REVERSE(res, &m_list_head, CacheList, list_entry) {
+	      list_length++;
+	      if (res->m_pc == key) {
+		      m_prev_req_item = res;
+		      uis = res->m_uis;
+		      return true;
+	      }
+      }
       res = RB_FIND(CacheTree, &m_head, &find);
       if (res) {
         m_prev_req_item = res;
+	TAILQ_INSERT_TAIL(&m_list_head, res, list_entry);
+	if (list_length > 10)
+		TAILQ_REMOVE(&m_list_head, TAILQ_FIRST(&m_list_head), list_entry);
         result = &res->m_uis;
       }
     }
@@ -230,6 +245,7 @@ public:
 
 private:
   CacheItem *m_prev_req_item = nullptr;
+  TAILQ_HEAD(CacheList, CacheItem) m_list_head;
   RB_HEAD(CacheTree, CacheItem) m_head;
   RB_GENERATE(CacheTree, CacheItem, entry, CacheCmp);
 };
